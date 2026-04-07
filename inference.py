@@ -14,10 +14,10 @@ load_dotenv()
 
 API_BASE_URL = os.environ.get("API_BASE_URL", "https://api.groq.com/openai/v1")
 MODEL_NAME = os.environ.get("MODEL_NAME", "llama-3.3-70b-versatile")
-GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
-HF_TOKEN = os.environ.get("HF_TOKEN", "")
+# HF_TOKEN is the standard eval key; GROQ_API_KEY is local dev fallback
+API_KEY = os.environ.get("HF_TOKEN") or os.environ.get("GROQ_API_KEY", "")
 
-client = OpenAI(api_key=GROQ_API_KEY, base_url=API_BASE_URL)
+client = OpenAI(api_key=API_KEY, base_url=API_BASE_URL)
 
 MAX_TOTAL_REWARD = 1.0
 SUCCESS_SCORE_THRESHOLD = 0.5

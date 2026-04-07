@@ -11,7 +11,7 @@ EXPOSE 7860
 
 ENV API_BASE_URL=""
 ENV MODEL_NAME=""
-ENV GROQ_API_KEY=""
 ENV HF_TOKEN=""
+ENV GROQ_API_KEY=""
 
-CMD ["python", "inference.py"]
+CMD ["python", "-m", "uvicorn", "server.app:app", "--host", "0.0.0.0", "--port", "7860"]

@@ -1,60 +1,6 @@
+spec_version: 1
 name: judicial-reasoning-env
-version: 1.0.0
-description: >
-  An RL environment where an LLM agent acts as a judge,
-  reasoning through legal cases to deliver structured verdicts.
-  Covers contract, tort, and property law across 14 curated Indian cases.
-author: Team ALACRITY
-tags:
-  - legal
-  - reasoning
-  - rl
-  - openenv
-  - indian-law
-tasks:
-  - id: task1_contract
-    difficulty: easy
-    description: Contract breach and dispute resolution under Indian Contract Act
-    reward_range: [0.0, 1.0]
-    expected_baseline: 0.9760
-  - id: task2_tort
-    difficulty: medium
-    description: Tort and negligence cases with conflicting evidence
-    reward_range: [0.0, 1.0]
-    expected_baseline: 0.6853
-  - id: task3_property
-    difficulty: hard
-    description: Property and inheritance disputes with adversarial ambiguous facts
-    reward_range: [0.0, 1.0]
-    expected_baseline: 0.5520
-observation_space:
-  type: dict
-  fields:
-    case_id: string
-    fact_pattern: string
-    statutes: list[string]
-    precedents: list[dict]
-    evidence_flags: list[string]
-    domain: string
-    difficulty: string
-action_space:
-  type: dict
-  fields:
-    verdict: "liable | not_liable | guilty | not_guilty | partial_liability"
-    confidence_score: "float [0.0, 1.0]"
-    reasoning_chain: string
-    cited_precedents: list[string]
-reward_range: [0.0, 1.0]
-reward_components:
-  logic: 0.3
-  accuracy: 0.4
-  fairness: 0.2
-  citation: 0.1
-penalties:
-  hallucination: -0.2
-  max_hallucination_cap: -0.4
-bonuses:
-  adversarial_reasoning: 0.1
-language: python
-framework: gymnasium
-api_endpoint: "https://RishitaRamola42.hf.space"
+type: space
+runtime: fastapi
+app: server.app:app
+port: 7860
