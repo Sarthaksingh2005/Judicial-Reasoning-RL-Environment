@@ -66,7 +66,7 @@ Respond ONLY with a valid JSON object:
 }}"""
 
     def __init__(self):
-        api_key = os.environ.get("HF_TOKEN") or os.environ.get("GROQ_API_KEY", "")
+        api_key = os.environ.get("GROQ_API_KEY") or os.environ.get("HF_TOKEN", "")
         base_url = os.environ.get("API_BASE_URL", "https://api.groq.com/openai/v1")
         self.model = os.environ.get("MODEL_NAME", "llama-3.3-70b-versatile")
         self.client = OpenAI(api_key=api_key, base_url=base_url)
