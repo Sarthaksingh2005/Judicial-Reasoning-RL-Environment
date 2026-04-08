@@ -234,7 +234,7 @@ class JudicialEnv(gym.Env):
             - hallucination_penalty
             + adversarial_bonus
         )
-        composite = max(0.0, min(1.0, composite))
+        composite = max(0.001, min(0.999, composite))
 
         return JudicialReward(
             logic_score=round(logic, 4),

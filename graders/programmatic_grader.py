@@ -3,7 +3,7 @@ Programmatic Grader — Judicial Reasoning RL Environment
 Team ALACRITY — OpenEnv Hackathon
 
 Deterministic, reproducible grader for Tasks 1, 2, and 3.
-All scores are strictly in range [0.0, 1.0].
+All scores are strictly in range (0.001, 0.999) — never exactly 0.0 or 1.0.
 No grader returns a constant score (disqualification criterion).
 """
 
@@ -16,6 +16,13 @@ from typing import List, Optional
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from environment import JudicialEnv, JudicialAction
+
+
+def _clamp(score: float) -> float:
+    """Clamp score to strictly open interval (0.001, 0.999).
+    Validator requires scores strictly between 0 and 1 — not 0.0 or 1.0.
+    """
+    return max(0.001, min(0.999, score))
 
 
 class ProgrammaticGrader:
@@ -41,7 +48,7 @@ class ProgrammaticGrader:
 
         Metric: Programmatic verdict accuracy + statute citation check.
         An action is graded against the gold label for its matched case.
-        Returns mean score across all actions, strictly in [0.0, 1.0].
+        Returns mean score, strictly in (0.001, 0.999).
         """
         env = JudicialEnv(domain=domain, difficulty=difficulty)
         scores = []
@@ -52,10 +59,9 @@ class ProgrammaticGrader:
             scores.append(reward)
 
         if not scores:
-            return 0.0
+            return 0.001
 
-        score = sum(scores) / len(scores)
-        score = max(0.0, min(1.0, score))
+        score = _clamp(sum(scores) / len(scores))
         self.results["task1_contract"] = round(score, 4)
         return score
 
@@ -67,7 +73,7 @@ class ProgrammaticGrader:
 
         Metric: Reward composite (accuracy + logic + citation).
         Conflicting evidence cases check reasoning depth via logic_score.
-        Returns mean score across all actions, strictly in [0.0, 1.0].
+        Returns mean score, strictly in (0.001, 0.999).
         """
         env = JudicialEnv(domain=domain, difficulty=difficulty)
         scores = []
@@ -76,14 +82,13 @@ class ProgrammaticGrader:
             obs, _ = env.reset()
             _, reward, _, _, info = env.step(action)
             # For tort: weight reasoning quality more heavily
-            logic_adjusted_reward = reward * 0.6 + info["logic_score"] * 0.4
-            scores.append(min(logic_adjusted_reward, 1.0))
+            logic_adjusted_reward = reward * 0.6 + info.get("logic_score", 0.5) * 0.4
+            scores.append(logic_adjusted_reward)
 
         if not scores:
-            return 0.0
+            return 0.001
 
-        score = sum(scores) / len(scores)
-        score = max(0.0, min(1.0, score))
+        score = _clamp(sum(scores) / len(scores))
         self.results["task2_tort"] = round(score, 4)
         return score
 
@@ -96,7 +101,7 @@ class ProgrammaticGrader:
         Metric: Cross-case fairness + citation similarity.
         No single gold label for all cases — grader rewards consistency
         and valid citation usage, not just verdict correctness.
-        Returns mean score, strictly in [0.0, 1.0].
+        Returns mean score, strictly in (0.001, 0.999).
         """
         env = JudicialEnv(domain=domain, difficulty=difficulty)
         scores = []
@@ -107,20 +112,19 @@ class ProgrammaticGrader:
             obs, _ = env.reset()
             _, reward, _, _, info = env.step(action)
             scores.append(reward)
-            citation_scores.append(info["citation_score"])
-            fairness_scores.append(info["fairness_score"])
+            citation_scores.append(info.get("citation_score", 0.5))
+            fairness_scores.append(info.get("fairness_score", 0.5))
 
         if not scores:
-            return 0.0
+            return 0.001
 
         # Task 3 is graded heavier on consistency and citation, lighter on accuracy
         avg_reward = sum(scores) / len(scores)
-        avg_citation = sum(citation_scores) / len(citation_scores) if citation_scores else 0.0
-        avg_fairness = sum(fairness_scores) / len(fairness_scores) if fairness_scores else 0.0
+        avg_citation = sum(citation_scores) / len(citation_scores) if citation_scores else 0.5
+        avg_fairness = sum(fairness_scores) / len(fairness_scores) if fairness_scores else 0.5
 
         # Custom weight for property task: fairness + citation dominate
-        score = 0.3 * avg_reward + 0.4 * avg_fairness + 0.3 * avg_citation
-        score = max(0.0, min(1.0, score))
+        score = _clamp(0.3 * avg_reward + 0.4 * avg_fairness + 0.3 * avg_citation)
         self.results["task3_property"] = round(score, 4)
         return score
 
@@ -134,16 +138,8 @@ class ProgrammaticGrader:
     ) -> dict:
         """
         Run all three task graders and return a results dict.
-
-        Args:
-            task1_actions: List of actions for contract task
-            task2_actions: List of actions for tort task
-            task3_actions: List of actions for property task
-
-        Returns:
-            dict with per-task scores and overall average
+        All scores strictly in (0.001, 0.999).
         """
-        # Default: single dummy action per task for smoke-test
         dummy_action = JudicialAction(
             verdict="liable",
             confidence_score=0.5,
@@ -155,7 +151,7 @@ class ProgrammaticGrader:
         t2 = self.grade_task2(task2_actions or [dummy_action])
         t3 = self.grade_task3(task3_actions or [dummy_action])
 
-        overall = (t1 + t2 + t3) / 3.0
+        overall = _clamp((t1 + t2 + t3) / 3.0)
 
         return {
             "task1_contract": round(t1, 4),
@@ -165,8 +161,8 @@ class ProgrammaticGrader:
         }
 
     def validate_score_range(self, score: float, task_name: str) -> float:
-        """Assert score is in [0.0, 1.0] and return it. Raises on constant zero."""
-        assert 0.0 <= score <= 1.0, f"{task_name} score {score} out of range [0, 1]"
+        """Assert score is strictly in (0, 1) and return it."""
+        assert 0.0 < score < 1.0, f"{task_name} score {score} must be strictly between 0 and 1"
         return score
 
 
@@ -175,4 +171,4 @@ if __name__ == "__main__":
     grader = ProgrammaticGrader()
     results = grader.grade_all()
     print(json.dumps(results, indent=2))
-    print(f"\nAll scores in range [0, 1]: {all(0.0 <= v <= 1.0 for v in results.values())}")
+    print(f"\nAll scores strictly in (0, 1): {all(0.0 < v < 1.0 for v in results.values())}")

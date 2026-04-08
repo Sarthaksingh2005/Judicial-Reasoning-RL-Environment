@@ -20,7 +20,7 @@ import time
 
 import uvicorn
 from fastapi import FastAPI
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from dotenv import load_dotenv
 from openai import OpenAI
 
@@ -62,17 +62,10 @@ app = FastAPI(
 )
 
 
-@app.get("/", response_model=dict)
+@app.get("/", include_in_schema=False)
 def root():
-    """Environment info and current inference status."""
-    return {
-        "name": "judicial-reasoning-env",
-        "version": "1.0.0",
-        "team": "Team ALACRITY",
-        "description": "RL environment where an LLM agent acts as a judge over Indian legal cases.",
-        "status": RESULTS["status"],
-        "tasks": [t["name"] for t in TASKS],
-    }
+    """Redirect to the auto-generated API documentation (Swagger UI)."""
+    return RedirectResponse(url="/docs")
 
 
 @app.get("/health", response_model=HealthResponse)
@@ -239,8 +232,8 @@ async def run_task(task_config: dict, client: OpenAI) -> float:
                 log_step(step=step_num, action="ERROR", reward=0.0, done=False, error=str(e))
                 break
 
-        score = sum(rewards) / (len(rewards) * MAX_TOTAL_REWARD) if rewards else 0.0
-        score = min(max(score, 0.0), 1.0)
+        score = sum(rewards) / (len(rewards) * MAX_TOTAL_REWARD) if rewards else 0.001
+        score = min(max(score, 0.001), 0.999)
         success = score >= SUCCESS_SCORE_THRESHOLD
 
     finally:

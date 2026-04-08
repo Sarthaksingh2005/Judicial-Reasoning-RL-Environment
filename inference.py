@@ -111,8 +111,8 @@ async def run_task(task_config: dict) -> float:
                 log_step(step=step, action="ERROR", reward=0.0, done=False, error=error)
                 break
 
-        score = sum(rewards) / (len(rewards) * MAX_TOTAL_REWARD) if rewards else 0.0
-        score = min(max(score, 0.0), 1.0)
+        score = sum(rewards) / (len(rewards) * MAX_TOTAL_REWARD) if rewards else 0.001
+        score = min(max(score, 0.001), 0.999)  # strictly between 0 and 1
         success = score >= SUCCESS_SCORE_THRESHOLD
 
     finally:
