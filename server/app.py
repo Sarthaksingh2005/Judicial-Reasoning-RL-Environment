@@ -71,18 +71,15 @@ ui_dir = os.path.join(os.path.dirname(__file__), "ui")
 
 @app.get("/", include_in_schema=False)
 def root():
-    """Serve the Judicial Reasoning Env UI."""
-    return FileResponse(os.path.join(ui_dir, "index.html"))
+    return FileResponse(os.path.join(ui_dir, "index.html"), headers={"Cache-Control": "no-cache, no-store"})
 
 @app.get("/styles.css", include_in_schema=False)
-def styles():
-    """Serve the CSS file."""
-    return FileResponse(os.path.join(ui_dir, "styles.css"))
+def styles(v: str = None):
+    return FileResponse(os.path.join(ui_dir, "styles.css"), media_type="text/css", headers={"Cache-Control": "no-cache, no-store"})
 
 @app.get("/script.js", include_in_schema=False)
-def script():
-    """Serve the JS file."""
-    return FileResponse(os.path.join(ui_dir, "script.js"))
+def script(v: str = None):
+    return FileResponse(os.path.join(ui_dir, "script.js"), media_type="application/javascript", headers={"Cache-Control": "no-cache, no-store"})
 
 
 @app.get("/health", response_model=HealthResponse)
