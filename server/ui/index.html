@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css?v=4">
+    <link rel="stylesheet" href="/styles.css?v=7">
 </head>
 <body>
 
@@ -111,35 +111,52 @@
             <h2 class="screen-title">What type of case is this?</h2>
             <p class="screen-subtitle">Choose the category that best describes your situation</p>
 
-            <div class="type-cards">
+            <div class="type-cards three-col">
                 <button class="type-card" id="btn-civil" data-type="civil">
                     <div class="type-icon">🤝</div>
                     <h3>Civil Case</h3>
-                    <p>A dispute between two parties — a disagreement about money, property, contracts, family matters, or employment.</p>
+                    <p>A dispute between two parties — about money, property, contracts, family, or employment.</p>
                     <div class="type-examples">
                         <span>Rent dispute</span>
                         <span>Cheque bounce</span>
                         <span>Divorce</span>
-                        <span>Property</span>
+                        <span>Medical negligence</span>
+                        <span>Consumer dispute</span>
                     </div>
                 </button>
 
                 <button class="type-card" id="btn-criminal" data-type="criminal">
                     <div class="type-icon">⚖️</div>
                     <h3>Criminal Case</h3>
-                    <p>An act that is an offence against the law or the State — involving harm, theft, fraud, or other offences listed in the BNS.</p>
+                    <p>An offence against the law or the State — involving harm, theft, fraud, sexual violence, or other BNS offences.</p>
                     <div class="type-examples">
-                        <span>Assault</span>
+                        <span>Assault / Rape</span>
+                        <span>Murder</span>
+                        <span>Domestic violence</span>
+                        <span>Kidnapping</span>
                         <span>Fraud</span>
-                        <span>Theft</span>
-                        <span>Harassment</span>
+                        <span>Cyber crime</span>
+                    </div>
+                </button>
+
+                <button class="type-card quasi-card" id="btn-quasi" data-type="quasi">
+                    <div class="type-icon">🏛️</div>
+                    <h3>Quasi-Judicial / Administrative</h3>
+                    <p>Regulatory, licensing, or compliance matters handled by tribunals or government bodies — not courts.</p>
+                    <div class="type-examples">
+                        <span>RTI Appeal</span>
+                        <span>Licensing dispute</span>
+                        <span>Tax / Revenue</span>
+                        <span>Electoral complaint</span>
+                        <span>Consumer commission</span>
+                        <span>Service tribunal</span>
                     </div>
                 </button>
             </div>
 
             <div class="help-note">
                 <span>🤔</span>
-                <span>Not sure? <strong>Civil</strong> is usually between two people. <strong>Criminal</strong> usually involves the police or a crime.</span>
+                <span>Not sure? <strong>Civil</strong> is a personal dispute. <strong>Criminal</strong> involves a crime or police. <strong>Quasi-Judicial</strong> involves a government body or regulator.</span>
             </div>
         </div>
     </div>

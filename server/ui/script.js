@@ -42,6 +42,18 @@ const CRIMINAL_CATS = [
     { icon: '🤷', label: 'Other / Not Listed', desc: 'Describe your situation — JusticeEngine-01 will categorise', domain: 'petty_crime', difficulty: 'easy' },
 ];
 
+const QUASI_CATS = [
+    { icon: '📄', label: 'RTI Appeal', desc: 'Appealing a denial or non-response to a Right to Information request', domain: 'contract', difficulty: 'easy' },
+    { icon: '🎫', label: 'Licensing Dispute', desc: 'Rejection or cancellation of a business, trade, or professional licence', domain: 'contract', difficulty: 'medium' },
+    { icon: '💰', label: 'Tax / Revenue Dispute', desc: 'Dispute with income tax, GST, or revenue authorities', domain: 'contract', difficulty: 'hard' },
+    { icon: '🗳️', label: 'Electoral Complaint', desc: 'Complaints regarding elections, voter rights, or misconduct', domain: 'contract', difficulty: 'medium' },
+    { icon: '🛍️', label: 'Consumer Commission', desc: 'Escalating a consumer dispute to a District or State Consumer Commission', domain: 'contract', difficulty: 'easy' },
+    { icon: '👤', label: 'Service / Employment Tribunal', desc: 'Government or public sector employment disputes via CAT or tribunal', domain: 'contract', difficulty: 'medium' },
+    { icon: '🏥', label: 'Medical / Health Regulatory', desc: 'Complaints to MCI, NMC, or other regulatory health bodies', domain: 'tort', difficulty: 'medium' },
+    { icon: '🌎', label: 'Environmental / Pollution Board', desc: 'Complaints to NGT or State Pollution Control Board', domain: 'tort', difficulty: 'hard' },
+    { icon: '🤷', label: 'Other Regulatory Matter', desc: 'Any other government body or tribunal hearing', domain: 'contract', difficulty: 'easy' },
+];
+
 // ─── Landing ──────────────────────────────────────────
 document.getElementById('enter-btn').addEventListener('click', () => show('screen-action'));
 document.getElementById('back-to-landing').addEventListener('click', () => show('screen-landing'));
@@ -59,7 +71,9 @@ document.getElementById('btn-confirm-withdraw').addEventListener('click', () => 
 document.getElementById('back-to-action').addEventListener('click', () => show('screen-action'));
 document.getElementById('btn-civil').addEventListener('click', () => { currentType = 'civil'; buildSubcats(CIVIL_CATS); show('screen-subcat'); });
 document.getElementById('btn-criminal').addEventListener('click', () => { currentType = 'criminal'; buildSubcats(CRIMINAL_CATS); show('screen-subcat'); });
+document.getElementById('btn-quasi').addEventListener('click', () => { currentType = 'quasi'; buildSubcats(QUASI_CATS); show('screen-subcat'); });
 document.getElementById('back-to-type').addEventListener('click', () => show('screen-type'));
+
 
 // ─── Sub-category builder ─────────────────────────────
 function buildSubcats(cats) {
@@ -113,10 +127,132 @@ async function loadDossier() {
         currentCaseData = data.observation;
         renderDossierLeft(currentCaseData);
         startFactFinding();
+        // ★ Issue Registration Letter immediately
+        printLetter('registration', { caseId: currentCaseData.case_id });
     } catch(e) {
         renderDossierLeft({ case_id: 'DEMO-001', fact_pattern: 'Could not load case from server.', evidence_flags: [], statutes: [] });
         startFactFinding();
+        printLetter('registration', { caseId: 'DEMO-001' });
     }
+}
+
+// ─── Digital Stamped Letters ─────────────────────────
+function printLetter(type, data) {
+    const now = new Date();
+    const timestamp = now.toLocaleString('en-IN', { dateStyle: 'full', timeStyle: 'medium' });
+    const refNo = `JA-${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${Math.floor(Math.random()*90000+10000)}`;
+
+    let title = '', body = '', stampText = '', stampColor = '#1a5276';
+
+    if (type === 'registration') {
+        title = 'Case Registration Certificate';
+        stampText = 'REGISTERED';
+        stampColor = '#1a5276';
+        body = `
+            <p>This is to certify that the following case has been <strong>officially registered</strong> with the Justice AI Portal on the date and time indicated below.</p>
+            <table>
+                <tr><td>Case ID</td><td><strong>${data.caseId}</strong></td></tr>
+                <tr><td>Reference No.</td><td><strong>${refNo}</strong></td></tr>
+                <tr><td>Registered On</td><td><strong>${timestamp}</strong></td></tr>
+                <tr><td>Case Type</td><td><strong>${currentType ? currentType.toUpperCase() : 'N/A'}</strong></td></tr>
+                <tr><td>Status</td><td><strong style="color:#1a5276">REGISTERED — AI Fact-Finding in Progress</strong></td></tr>
+            </table>
+            <p style="margin-top:1.5rem;">This document serves as <strong>official proof of registration</strong>. The timestamp above is tamper-proof and can be cited if any dispute arises regarding when this case was filed.</p>`;
+    } else if (type === 'resolution') {
+        title = 'AI Resolution Certificate';
+        stampText = 'RESOLVED BY AI';
+        stampColor = '#1e8449';
+        body = `
+            <p>This is to certify that the following case has been <strong>reviewed and resolved</strong> by JusticeEngine-01 (AI Legal Mediator) and the resolution has been <strong>accepted by the petitioner</strong>.</p>
+            <table>
+                <tr><td>Case ID</td><td><strong>${data.caseId}</strong></td></tr>
+                <tr><td>Reference No.</td><td><strong>${refNo}</strong></td></tr>
+                <tr><td>Resolved On</td><td><strong>${timestamp}</strong></td></tr>
+                <tr><td>AI Verdict</td><td><strong>${data.verdict || 'N/A'}</strong></td></tr>
+                <tr><td>Logic Score</td><td>${data.logic || 'N/A'}</td></tr>
+                <tr><td>Accuracy Score</td><td>${data.accuracy || 'N/A'}</td></tr>
+                <tr><td>Status</td><td><strong style="color:#1e8449">CASE CLOSED — Accepted by Petitioner</strong></td></tr>
+            </table>
+            <div style="margin-top:1.5rem; padding:1rem; background:#eafaf1; border-left:4px solid #1e8449; border-radius:4px;">
+                <strong>AI Reasoning Summary:</strong><br>
+                <p style="margin-top:0.5rem;">${data.reasoning || 'Detailed analysis on file.'}</p>
+            </div>`;
+    } else if (type === 'escalation') {
+        title = 'Case Forwarded to Human Judge';
+        stampText = 'FORWARDED TO JUDGE';
+        stampColor = '#922b21';
+        body = `
+            <p>This is to certify that the following case, <strong>after receiving a Preliminary AI Opinion</strong>, has been <strong>escalated to a Human Presiding Officer</strong> as per the petitioner's request.</p>
+            <table>
+                <tr><td>Case ID</td><td><strong>${data.caseId}</strong></td></tr>
+                <tr><td>Reference No.</td><td><strong>${refNo}</strong></td></tr>
+                <tr><td>Escalated On</td><td><strong>${timestamp}</strong></td></tr>
+                <tr><td>AI Draft Verdict</td><td><strong>${data.verdict || 'N/A'}</strong></td></tr>
+                <tr><td>Escalation Reason(s)</td><td>${(data.reasons || []).join('; ') || 'Not specified'}</td></tr>
+                <tr><td>Status</td><td><strong style="color:#922b21">PENDING HUMAN REVIEW</strong></td></tr>
+            </table>
+            <div style="margin-top:1.5rem; padding:1rem; background:#fdf2f8; border-left:4px solid #922b21; border-radius:4px;">
+                <strong>AI Preliminary Reasoning (included for Judge's review):</strong><br>
+                <p style="margin-top:0.5rem;">${data.reasoning || 'Preliminary analysis on file.'}</p>
+            </div>
+            <p style="margin-top:1rem;"><em>Note: The Human Judge will receive the complete case dossier along with this document.</em></p>`;
+    }
+
+    const win = window.open('', '_blank', 'width=800,height=700');
+    win.document.write(`<!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>${title}</title>
+        <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+        <style>
+            body { font-family: 'Inter', sans-serif; background: #f5f5f0; margin: 0; padding: 2rem; color: #1a1a1a; }
+            .letter { background: white; max-width: 750px; margin: 0 auto; padding: 3rem; border: 1px solid #ddd; box-shadow: 0 4px 20px rgba(0,0,0,0.1); position: relative; }
+            .letterhead { display: flex; align-items: center; justify-content: space-between; border-bottom: 3px solid #0a0e1a; padding-bottom: 1.5rem; margin-bottom: 2rem; }
+            .letterhead-left { display: flex; align-items: center; gap: 1rem; }
+            .lh-logo { font-size: 2.5rem; }
+            .lh-title { font-family: 'Playfair Display', serif; font-size: 1.5rem; color: #0a0e1a; }
+            .lh-sub { font-size: 0.8rem; color: #666; margin-top: 0.2rem; }
+            .lh-right { text-align: right; font-size: 0.8rem; color: #666; }
+            h2 { font-family: 'Playfair Display', serif; font-size: 1.4rem; text-align: center; margin-bottom: 1.5rem; color: #0a0e1a; }
+            table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+            td { padding: 0.6rem 0.75rem; border: 1px solid #e0e0e0; font-size: 0.9rem; }
+            td:first-child { background: #f9f9f9; width: 35%; font-weight: 600; color: #444; }
+            .stamp { position: absolute; top: 3.5rem; right: 3rem; width: 110px; height: 110px; border: 5px solid ${stampColor}; border-radius: 50%; display: flex; align-items: center; justify-content: center; transform: rotate(-15deg); opacity: 0.85; }
+            .stamp-inner { text-align: center; color: ${stampColor}; font-weight: 700; font-size: 0.7rem; letter-spacing: 0.05em; line-height: 1.4; padding: 0.5rem; }
+            .footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid #ddd; font-size: 0.75rem; color: #888; display: flex; justify-content: space-between; }
+            .print-btn { display: block; width: 100%; max-width: 750px; margin: 1.5rem auto 0; padding: 0.85rem; background: #0a0e1a; color: white; border: none; border-radius: 6px; font-size: 1rem; cursor: pointer; font-family: 'Inter', sans-serif; }
+            .print-btn:hover { background: #1a2744; }
+            @media print { .print-btn { display: none; } body { background: white; padding: 0; } .letter { box-shadow: none; border: none; } }
+        </style>
+    </head>
+    <body>
+        <div class="letter">
+            <div class="stamp"><div class="stamp-inner">⚖️<br>${stampText}<br>JUSTICE AI</div></div>
+            <div class="letterhead">
+                <div class="letterhead-left">
+                    <span class="lh-logo">⚖️</span>
+                    <div>
+                        <div class="lh-title">Justice AI Portal</div>
+                        <div class="lh-sub">India's AI Legal Mediator | Powered by JusticeEngine-01</div>
+                    </div>
+                </div>
+                <div class="lh-right">
+                    Ref: <strong>${refNo}</strong><br>
+                    ${timestamp}
+                </div>
+            </div>
+            <h2>${title}</h2>
+            ${body}
+            <div class="footer">
+                <span>Document generated by Justice AI — justiceai.local</span>
+                <span>Ref: ${refNo} | ${timestamp}</span>
+            </div>
+        </div>
+        <button class="print-btn" onclick="window.print()">🖨️ Print or Save as PDF</button>
+    </body>
+    </html>`);
+    win.document.close();
 }
 
 document.getElementById('back-to-subcat').addEventListener('click', () => show('screen-subcat'));
@@ -291,6 +427,14 @@ document.getElementById('modal-confirm').addEventListener('click', async () => {
     document.getElementById('escalation-modal').style.display = 'none';
     document.getElementById('verdict-panel').style.display = 'none';
     document.getElementById('escalated-panel').style.display = 'block';
+
+    // ★ Issue Escalation Letter
+    printLetter('escalation', {
+        caseId: currentCaseData ? currentCaseData.case_id : 'N/A',
+        verdict: document.getElementById('v-verdict').textContent,
+        reasoning: document.getElementById('v-reasoning').textContent,
+        reasons: reasons.length ? reasons : ['User requested human oversight'],
+    });
 });
 
 // ─── Init ─────────────────────────────────────────────

@@ -138,12 +138,17 @@ body {
 
 /* ── TYPE CARDS ── */
 .type-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; width: 100%; margin-bottom: 1.5rem; }
+.type-cards.three-col { grid-template-columns: 1fr 1fr 1fr; }
+@media (max-width: 780px) { .type-cards.three-col { grid-template-columns: 1fr; } }
+
 .type-card {
     background: var(--navy2); border: 2px solid var(--glass-border);
     border-radius: 16px; padding: 2rem 1.5rem; cursor: pointer; text-align: left;
     color: var(--white); font-family: 'Inter', sans-serif; transition: all 0.25s ease;
 }
 .type-card:hover { border-color: var(--gold); background: var(--gold-dim); transform: translateY(-3px); }
+.type-card.quasi-card:hover { border-color: #7289da; background: rgba(114,137,218,0.1); }
+
 .type-icon { font-size: 2.5rem; margin-bottom: 1rem; display: block; }
 .type-card h3 { font-size: 1.2rem; font-weight: 700; margin-bottom: 0.75rem; }
 .type-card p { font-size: 0.875rem; color: var(--muted); line-height: 1.6; margin-bottom: 1rem; }
