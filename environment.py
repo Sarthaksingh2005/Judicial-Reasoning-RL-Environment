@@ -154,7 +154,7 @@ class JudicialEnv(gym.Env):
             "citation_score": reward_obj.citation_score,
             "composite_reward": reward_obj.composite,
             "case_id": self.current_case["case_id"],
-            "gold_label": self.current_case["gold_label_verdict"]
+            "gold_label": self.current_case.get("gold_label_verdict") or self.current_case.get("expert_verdict", "forward_to_judge")
         }
 
         obs = self._get_obs()
@@ -298,8 +298,11 @@ class JudicialEnv(gym.Env):
         return round(logic, 4)
 
     def _accuracy_score(self, action: JudicialAction) -> float:
-        """Exact match against gold label. Partial credit for partial_liability adjacency."""
-        gold = self.current_case["gold_label_verdict"]
+        """Exact match against gold label. Partial credit for partial_liability adjacency.
+        For criminal cases that only have expert_verdict, use that as the gold label.
+        """
+        # Support both gold_label_verdict (civil) and expert_verdict (criminal)
+        gold = self.current_case.get("gold_label_verdict") or self.current_case.get("expert_verdict", "forward_to_judge")
         if action.verdict == gold:
             return 1.0
         # Partial credit if both are ambiguity-adjacent

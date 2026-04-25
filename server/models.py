@@ -10,6 +10,8 @@ from pydantic import BaseModel
 class ResetRequest(BaseModel):
     domain: str = "contract"
     difficulty: str = "easy"
+    custom_facts: Optional[str] = None
+    custom_evidence: Optional[List[str]] = None
 
 
 class StepRequest(BaseModel):

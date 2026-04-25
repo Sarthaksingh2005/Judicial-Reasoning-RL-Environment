@@ -52,6 +52,30 @@
                     <span class="ov-chip">+ many more...</span>
                 </div>
             </div>
+
+            <!-- NJDG Live Statistics -->
+            <div class="njdg-strip">
+                <h4 style="color:#ef4444; margin:0 0 1rem; font-size:0.9rem; text-transform:uppercase; letter-spacing:0.1em;">📊 India's Judicial Crisis — Live Data (NJDG)</h4>
+                <div class="njdg-stats">
+                    <div class="njdg-stat">
+                        <div class="njdg-num" id="counter-total">0</div>
+                        <div class="njdg-label">Total Pending Cases</div>
+                    </div>
+                    <div class="njdg-stat">
+                        <div class="njdg-num" style="color:#f59e0b;" id="counter-women">0</div>
+                        <div class="njdg-label">Cases Filed by Women</div>
+                    </div>
+                    <div class="njdg-stat">
+                        <div class="njdg-num" style="color:#ef4444;" id="counter-undated">0</div>
+                        <div class="njdg-label">Undated / Unscheduled</div>
+                    </div>
+                    <div class="njdg-stat">
+                        <div class="njdg-num" style="color:#a78bfa;" id="counter-years">0</div>
+                        <div class="njdg-label">Avg Wait (Years)</div>
+                    </div>
+                </div>
+                <p style="font-size:0.75rem; color:#64748b; margin:0.75rem 0 0; text-align:center;">Source: <a href="https://njdg.ecourts.gov.in/njdg_v3/" target="_blank" style="color:#3b82f6;">National Judicial Data Grid (NJDG)</a> · JusticeEngine-01 aims to help clear this backlog.</p>
+            </div>
         </div>
     </div>
 
@@ -233,10 +257,23 @@
                         <option value="witness">No, I am a witness</option>
                     </select>
                 </div>
+                <div class="form-group" style="margin-bottom: 1.5rem;">
+                    <label style="display:block; margin-bottom:0.5rem; color:var(--gold);">Briefly describe what happened</label>
+                    <p style="font-size: 0.8rem; color: var(--muted); margin-bottom: 0.5rem;">Write in your own words. The AI will use this as your case summary.</p>
+                    <textarea id="case-summary-input" rows="4" placeholder="e.g. My landlord refused to return my security deposit of Rs. 30,000 even after I vacated the property on time and gave proper notice..." style="width:100%;padding:0.75rem;border-radius:6px;background:rgba(255,255,255,0.05);border:1px solid var(--border);color:white;font-family:inherit;resize:vertical;"></textarea>
+                </div>
                 <div class="form-group" style="margin-bottom: 2rem;">
                     <label style="display:block; margin-bottom:0.5rem; color:var(--gold);">Do you know the offender?</label>
                     <p style="font-size: 0.8rem; color: var(--muted); margin-bottom: 0.5rem;">If known, they will be notified.</p>
-                    <input type="text" id="offender-input" placeholder="Name, License Plate, or Phone (Optional)" style="width: 100%; padding: 0.75rem; border-radius: 6px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: white;">
+                    <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.8rem;">
+                        <input type="checkbox" id="offender-unknown-cb" onchange="document.getElementById('offender-inputs-container').style.display = this.checked ? 'none' : 'grid'">
+                        <label for="offender-unknown-cb" style="font-size:0.9rem; color:white; cursor:pointer;">I do not know the offender</label>
+                    </div>
+                    <div id="offender-inputs-container" style="display:grid; gap:0.5rem;">
+                        <input type="text" id="offender-name" placeholder="Full Name" style="width: 100%; padding: 0.75rem; border-radius: 6px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: white;">
+                        <input type="text" id="offender-phone" placeholder="Phone Number" style="width: 100%; padding: 0.75rem; border-radius: 6px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: white;">
+                        <input type="text" id="offender-address" placeholder="Address, License Plate, or other ID" style="width: 100%; padding: 0.75rem; border-radius: 6px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: white;">
+                    </div>
                 </div>
                 
                 <button id="btn-verify-kyc" class="btn-gold" style="width: 100%; justify-content: center;">
@@ -323,14 +360,7 @@
                         <!-- populated by JS -->
                     </div>
 
-                    <div id="locker-zone" class="locker-zone" title="Click to simulate uploading evidence document">
-                        <span style="font-size:1.5rem;">📁</span>
-                        <div>
-                            <strong>Evidence Locker</strong>
-                            <p style="font-size:0.8rem; margin:0; color:#94a3b8;">Click to add a document, photo or PDF</p>
-                        </div>
-                    </div>
-
+                    <!-- Locker zone removed as per user feedback; evidence is uploaded on previous screen -->
                     <div class="chat-input-bar">
                         <input id="chat-input" type="text" placeholder="Type your answer here...">
                         <button id="chat-send" class="btn-send">Send</button>
@@ -478,5 +508,21 @@
     </div>
 
     <script src="/script.js"></script>
+
+    <!-- Quick Links Persistent Footer -->
+    <div id="quick-links-footer" style="position:fixed;bottom:0;left:0;right:0;background:rgba(10,14,26,0.97);backdrop-filter:blur(10px);border-top:1px solid #1e293b;padding:0.6rem 1.5rem;display:flex;align-items:center;gap:1rem;overflow-x:auto;z-index:900;font-size:0.78rem;">
+        <span style="color:#64748b;font-weight:600;white-space:nowrap;">Quick Links:</span>
+        <a href="/" style="color:#94a3b8;text-decoration:none;white-space:nowrap;" onclick="show('screen-action');return false;">📋 My Case</a>
+        <span style="color:#1e293b;">|</span>
+        <a href="/police" target="_blank" style="color:#94a3b8;text-decoration:none;white-space:nowrap;">👮 Police Module</a>
+        <span style="color:#1e293b;">|</span>
+        <a href="/judge" target="_blank" style="color:#94a3b8;text-decoration:none;white-space:nowrap;">⚖️ Judge Dashboard</a>
+        <span style="color:#1e293b;">|</span>
+        <a href="https://nalsa.gov.in" target="_blank" style="color:#ef4444;text-decoration:none;white-space:nowrap;">🆘 NALSA Helpline</a>
+        <span style="color:#1e293b;">|</span>
+        <a href="https://www.mha.gov.in/en/commoncontent/new-criminal-laws" target="_blank" style="color:#94a3b8;text-decoration:none;white-space:nowrap;">📖 Know BNS Laws</a>
+        <span style="color:#1e293b;">|</span>
+        <a href="https://njdg.ecourts.gov.in/njdg_v3/" target="_blank" style="color:#94a3b8;text-decoration:none;white-space:nowrap;">📊 NJDG</a>
+    </div>
 </body>
 </html>

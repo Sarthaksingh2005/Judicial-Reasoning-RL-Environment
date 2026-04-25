@@ -1,6 +1,58 @@
 spec_version: 1
 name: judicial-reasoning-env
+description: "An RL environment where LLM agents act as AI judges in the Indian legal system, trained with verifiable rewards under the Bharatiya Nyaya Sanhita (BNS) 2023."
 type: space
 runtime: fastapi
 app: server.app:app
 port: 7860
+version: "2.0"
+authors:
+  - name: "Rishita Ramola"
+    email: "rishitaramola42@gmail.com"
+  - name: "Sarthak Singh"
+
+tasks:
+  - name: task1_contract
+    domain: contract
+    difficulty: easy
+    description: "Contract dispute resolution — breach of contract, non-delivery, delay"
+    reward_range: [0.001, 0.999]
+
+  - name: task2_tort
+    domain: tort
+    difficulty: medium
+    description: "Tort and negligence — conflicting evidence, contributory negligence, medical negligence"
+    reward_range: [0.001, 0.999]
+
+  - name: task3_property
+    domain: property
+    difficulty: hard
+    description: "Property and inheritance disputes — competing claims, adverse possession, succession"
+    reward_range: [0.001, 0.999]
+
+  - name: task4_petty_crime
+    domain: petty_crime
+    difficulty: hard
+    description: "Criminal matters under BNS 2023 — AI acts as paralegal only, always forwards to human judge"
+    reward_range: [0.001, 0.999]
+
+reward:
+  formula: "R = 0.3*logic + 0.4*accuracy + 0.2*fairness + 0.1*citation - 0.2*hallucination_penalty + 0.05*sc_alignment_bonus - 0.15*hierarchy_violation"
+  components:
+    - name: logic_score
+      weight: 0.30
+      description: "Reasoning depth, BNS citation, legal keyword density"
+    - name: accuracy_score
+      weight: 0.40
+      description: "Exact match against expert gold_label_verdict"
+    - name: fairness_score
+      weight: 0.20
+      description: "Cross-case consistency within same domain"
+    - name: citation_score
+      weight: 0.10
+      description: "Valid cited precedents vs hallucinated ones"
+
+ethical_constraints:
+  - "AI may NOT issue guilty/not_guilty verdicts for criminal (BNS) cases"
+  - "Criminal cases must always output forward_to_judge"
+  - "All scores strictly in (0.001, 0.999) — never exactly 0 or 1"

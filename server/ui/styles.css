@@ -359,3 +359,45 @@ body {
 .w-100 { width: 100%; }
 .mt-2 { margin-top: 0.75rem; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+/* === NJDG STATISTICS STRIP === */
+.njdg-strip {
+    background: linear-gradient(135deg, rgba(239,68,68,0.08), rgba(10,14,26,0.95));
+    border: 1px solid rgba(239,68,68,0.25);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-top: 2rem;
+    text-align: center;
+}
+.njdg-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin-top: 0.5rem;
+}
+.njdg-stat { padding: 0.75rem 0; }
+.njdg-num {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: #ef4444;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+}
+.njdg-label {
+    font-size: 0.72rem;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-top: 0.25rem;
+}
+@media (max-width: 600px) {
+    .njdg-stats { grid-template-columns: repeat(2, 1fr); }
+    .njdg-num { font-size: 1.3rem; }
+}
+
+/* === VERDICT PILL COLORS === */
+.verdict-pill { display:inline-block; padding:0.3rem 1rem; border-radius:20px; font-weight:700; font-size:0.9rem; }
+.verdict-liable { background:rgba(239,68,68,0.15); color:#f87171; border:1px solid rgba(239,68,68,0.3); }
+.verdict-notliable { background:rgba(74,222,128,0.15); color:#4ade80; border:1px solid rgba(74,222,128,0.3); }
+.verdict-fwd { background:rgba(251,146,60,0.15); color:#fb923c; border:1px solid rgba(251,146,60,0.3); }
+.verdict-partial { background:rgba(250,204,21,0.15); color:#facc15; border:1px solid rgba(250,204,21,0.3); }

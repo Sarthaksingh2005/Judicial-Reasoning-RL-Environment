@@ -3,82 +3,423 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Police Verification Module</title>
-    <link rel="stylesheet" href="/styles.css?v=8">
+    <title>Police Verification Module — JusticeEngine-01</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/styles.css?v=9">
     <style>
-        body { background: #0f172a; }
-        .dashboard-header { background: #1e293b; padding: 1rem 2rem; border-bottom: 2px solid var(--info); display: flex; justify-content: space-between; align-items: center; }
-        .evidence-card { background: #1e293b; padding: 1.5rem; border-radius: 8px; margin: 1rem 0; border: 1px solid #334155; }
-        .status-pending { color: #facc15; font-weight: bold; }
-        .status-verified { color: #4ade80; font-weight: bold; }
-        .status-rejected { color: #f87171; font-weight: bold; }
+        * { box-sizing: border-box; }
+        body { background: #0a0e1a; font-family: 'Inter', sans-serif; color: #e2e8f0; margin: 0; }
+
+        .dashboard-header {
+            background: linear-gradient(135deg, #0f1b2d, #1a2744);
+            padding: 1rem 2rem;
+            border-bottom: 2px solid #3b82f6;
+            display: flex; justify-content: space-between; align-items: center;
+            position: sticky; top: 0; z-index: 100;
+        }
+        .header-left { display: flex; align-items: center; gap: 1rem; }
+        .badge-officer { background: rgba(59,130,246,0.2); border: 1px solid #3b82f6; color: #93c5fd; padding: 0.35rem 0.9rem; border-radius: 20px; font-size: 0.8rem; }
+        .badge-live { background: rgba(239,68,68,0.2); border: 1px solid #ef4444; color: #fca5a5; padding: 0.35rem 0.9rem; border-radius: 20px; font-size: 0.8rem; animation: pulse-border 2s infinite; }
+        @keyframes pulse-border { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+        .main-content { max-width: 960px; margin: 2rem auto; padding: 0 1.5rem; }
+
+        .stats-bar {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 2rem;
+        }
+        .stat-card { background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 1.25rem; text-align: center; }
+        .stat-num { font-size: 2rem; font-weight: 700; }
+        .stat-num.pending { color: #facc15; }
+        .stat-num.verified { color: #4ade80; }
+        .stat-num.rejected { color: #f87171; }
+        .stat-label { font-size: 0.8rem; color: #94a3b8; margin-top: 0.25rem; }
+
+        .section-title { font-size: 1.1rem; font-weight: 600; color: #94a3b8; margin: 1.5rem 0 1rem; text-transform: uppercase; letter-spacing: 0.08em; border-bottom: 1px solid #1e293b; padding-bottom: 0.5rem; }
+
+        .evidence-card {
+            background: #111827;
+            border: 1px solid #1e293b;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+            overflow: hidden;
+            transition: border-color 0.3s;
+        }
+        .evidence-card.pending { border-left: 4px solid #facc15; }
+        .evidence-card.verified { border-left: 4px solid #4ade80; }
+        .evidence-card.rejected { border-left: 4px solid #f87171; }
+
+        .card-header {
+            background: #1e293b; padding: 1rem 1.5rem;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .case-ref { font-weight: 700; font-size: 1rem; color: #f8fafc; }
+        .status-pill {
+            padding: 0.3rem 1rem; border-radius: 20px; font-size: 0.78rem; font-weight: 600;
+        }
+        .status-pill.pending { background: rgba(250,204,21,0.15); color: #facc15; border: 1px solid rgba(250,204,21,0.3); }
+        .status-pill.verified { background: rgba(74,222,128,0.15); color: #4ade80; border: 1px solid rgba(74,222,128,0.3); }
+        .status-pill.rejected { background: rgba(248,113,113,0.15); color: #f87171; border: 1px solid rgba(248,113,113,0.3); }
+
+        .card-body { padding: 1.5rem; }
+
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 1.5rem; }
+        .info-item label { font-size: 0.75rem; color: #64748b; display: block; margin-bottom: 0.2rem; text-transform: uppercase; letter-spacing: 0.05em; }
+        .info-item span { font-size: 0.9rem; color: #cbd5e1; }
+
+        /* ─── Evidence Media Gallery ─── */
+        .evidence-gallery-title { font-size: 0.85rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.75rem; }
+        .evidence-gallery {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 0.75rem; margin-bottom: 1.5rem;
+        }
+        .ev-item {
+            background: #1e293b; border: 1px solid #334155; border-radius: 8px;
+            overflow: hidden; cursor: pointer; transition: border-color 0.2s, transform 0.2s;
+            position: relative;
+        }
+        .ev-item:hover { border-color: #3b82f6; transform: translateY(-2px); }
+        .ev-item img { width: 100%; height: 110px; object-fit: cover; display: block; }
+        .ev-item .ev-placeholder {
+            width: 100%; height: 110px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 2.5rem; background: #0f172a;
+        }
+        .ev-item .ev-label { padding: 0.4rem 0.5rem; font-size: 0.72rem; color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .ev-item .ev-verify-check {
+            position: absolute; top: 6px; right: 6px;
+            width: 22px; height: 22px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.75rem; font-weight: 700;
+        }
+        .ev-item.item-ok .ev-verify-check { background: #4ade80; color: #000; }
+        .ev-item.item-no .ev-verify-check { background: #f87171; color: #fff; }
+
+        .ev-no-files { color: #475569; font-size: 0.9rem; padding: 1rem; background: #0f172a; border-radius: 8px; text-align: center; }
+
+        /* ─── Incident summary ─── */
+        .incident-box {
+            background: #0f172a; border-left: 3px solid #3b82f6; border-radius: 4px;
+            padding: 1rem; margin-bottom: 1.5rem; font-size: 0.9rem; color: #cbd5e1; line-height: 1.6;
+        }
+
+        /* ─── Per-item verification ─── */
+        .per-item-section { margin-bottom: 1.5rem; }
+        .per-item-row {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0.6rem 0.75rem; background: #0f172a; border-radius: 6px; margin-bottom: 0.4rem; border: 1px solid #1e293b;
+        }
+        .per-item-name { font-size: 0.85rem; color: #94a3b8; }
+        .per-item-btns { display: flex; gap: 0.5rem; }
+        .per-item-btns button {
+            padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; cursor: pointer; border: none;
+        }
+        .pib-ok { background: rgba(74,222,128,0.15); color: #4ade80; border: 1px solid rgba(74,222,128,0.3) !important; }
+        .pib-no { background: rgba(248,113,113,0.15); color: #f87171; border: 1px solid rgba(248,113,113,0.3) !important; }
+        .pib-ok.active { background: #4ade80; color: #000; }
+        .pib-no.active { background: #f87171; color: #fff; }
+
+        /* ─── Officer comment ─── */
+        .comment-label { font-size: 0.8rem; color: #64748b; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em; }
+        textarea.officer-comment {
+            width: 100%; padding: 0.75rem; border-radius: 8px;
+            background: #0f172a; border: 1px solid #334155; color: #e2e8f0;
+            font-family: 'Inter', sans-serif; font-size: 0.9rem; resize: vertical;
+            min-height: 90px; margin-bottom: 1.25rem;
+        }
+        textarea.officer-comment:focus { outline: none; border-color: #3b82f6; }
+
+        /* ─── Action buttons ─── */
+        .action-bar { display: flex; gap: 1rem; }
+        .btn-approve {
+            flex: 1; padding: 0.85rem; border-radius: 8px;
+            background: linear-gradient(135deg, #16a34a, #15803d);
+            color: white; font-weight: 700; border: none; cursor: pointer; font-size: 0.95rem;
+            transition: opacity 0.2s;
+        }
+        .btn-approve:hover { opacity: 0.9; }
+        .btn-reject {
+            flex: 1; padding: 0.85rem; border-radius: 8px;
+            background: rgba(248,113,113,0.1); color: #f87171;
+            border: 1px solid rgba(248,113,113,0.3); cursor: pointer; font-size: 0.95rem;
+            font-weight: 700; transition: background 0.2s;
+        }
+        .btn-reject:hover { background: rgba(248,113,113,0.2); }
+
+        /* ─── Image lightbox ─── */
+        .lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 999; align-items: center; justify-content: center; }
+        .lightbox.open { display: flex; }
+        .lightbox img { max-width: 90vw; max-height: 85vh; border-radius: 8px; box-shadow: 0 0 60px rgba(0,0,0,0.8); }
+        .lightbox-close { position: fixed; top: 1.5rem; right: 2rem; font-size: 2rem; color: white; cursor: pointer; z-index: 1000; }
+
+        /* ─── Empty state ─── */
+        .empty-state { text-align: center; padding: 4rem 2rem; color: #475569; }
+        .empty-state .es-icon { font-size: 4rem; margin-bottom: 1rem; }
+
+        .no-submit-note { font-size: 0.8rem; color: #64748b; text-align: center; margin-top: 0.75rem; }
     </style>
 </head>
 <body>
-    <div class="dashboard-header">
-        <h2 style="color: white; margin: 0;">🚔 Police Evidence Verification Module</h2>
-        <span style="color: var(--muted);">Officer ID: POL-4921</span>
-    </div>
 
-    <div style="max-width: 800px; margin: 2rem auto; padding: 0 1rem;">
-        <h3>Pending Verifications</h3>
-        
-        <div id="evidence-list">
-            <!-- Simulated Evidence Card for Demo -->
-            <div class="evidence-card" id="ev-1">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
-                    <strong>Case Ref: JA-2026-04-12944</strong>
-                    <span class="status-pending" id="status-1">⏳ PENDING REVIEW</span>
-                </div>
-                <div style="margin-bottom: 1rem; color: #cbd5e1;">
-                    <p><strong>Uploader Aadhar:</strong> 8374-XXXX-XXXX (Verified)</p>
-                    <p><strong>Files Attached:</strong> accident_scene.jpg, medical_report.pdf</p>
-                    <p><strong>Incident Summary:</strong> Traffic collision involving a minor driving a vehicle.</p>
-                </div>
-                <div style="margin-bottom: 1rem;">
-                    <label style="display:block; margin-bottom:0.5rem; color:var(--muted);">Officer Comments (Required):</label>
-                    <textarea id="comment-1" rows="3" style="width: 100%; padding: 0.5rem; border-radius: 4px; background: #0f172a; border: 1px solid #334155; color: white;" placeholder="Enter verification findings..."></textarea>
-                </div>
-                <div style="display: flex; gap: 1rem;">
-                    <button class="btn-gold" style="padding: 0.5rem 1rem;" onclick="verifyEvidence(1, true)">✅ Verify & Approve</button>
-                    <button class="btn-ghost" style="padding: 0.5rem 1rem; color: #f87171; border-color: #f87171;" onclick="verifyEvidence(1, false)">❌ Reject Evidence</button>
-                </div>
-            </div>
+<div class="dashboard-header">
+    <div class="header-left">
+        <span style="font-size:1.5rem;">🚔</span>
+        <div>
+            <div style="font-weight:700; font-size:1.1rem;">Police Evidence Verification Module</div>
+            <div style="font-size:0.8rem; color:#64748b;">Bharatiya Nagarik Suraksha Sanhita (BNSS) 2023 — Compliant</div>
+        </div>
+    </div>
+    <div style="display:flex; gap:0.75rem; align-items:center;">
+        <span class="badge-officer">🪪 Officer ID: POL-4921</span>
+        <span class="badge-live">🔴 LIVE</span>
+        <a href="/" style="color:#94a3b8; font-size:0.85rem; text-decoration:none;">← Back to Portal</a>
+    </div>
+</div>
+
+<div class="main-content">
+
+    <!-- Stats Bar -->
+    <div class="stats-bar">
+        <div class="stat-card">
+            <div class="stat-num pending" id="stat-pending">0</div>
+            <div class="stat-label">⏳ Pending Review</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-num verified" id="stat-verified">0</div>
+            <div class="stat-label">✅ Verified Today</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-num rejected" id="stat-rejected">0</div>
+            <div class="stat-label">❌ Rejected Today</div>
         </div>
     </div>
 
-    <script>
-        async function verifyEvidence(id, approved) {
-            const comments = document.getElementById(`comment-${id}`).value;
-            if (!comments) {
-                alert("Please add officer comments before taking action.");
-                return;
-            }
+    <div class="section-title">📂 Pending Evidence Submissions</div>
+    <div id="evidence-list"></div>
+</div>
 
-            // In a real app, this sends a POST to /verify_evidence
-            const statusEl = document.getElementById(`status-${id}`);
-            if (approved) {
-                statusEl.textContent = '✅ VERIFIED';
-                statusEl.className = 'status-verified';
-                alert("Evidence verified. The AI Courtroom flow for the user will now resume.");
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+    <span class="lightbox-close" onclick="closeLightbox()">✕</span>
+    <img id="lightbox-img" src="" alt="Evidence">
+</div>
+
+<script>
+// ─── State ─────────────────────────────────────────────
+let pendingCount = 0, verifiedCount = 0, rejectedCount = 0;
+const itemStatuses = {}; // { caseId_itemIdx: 'ok' | 'no' }
+
+// ─── Load evidence from localStorage ───────────────────
+function loadEvidenceQueue() {
+    const list = document.getElementById('evidence-list');
+    list.innerHTML = '';
+    pendingCount = 0; verifiedCount = 0; rejectedCount = 0;
+
+    // Get all evidence submissions stored by the main app
+    const submissionsRaw = localStorage.getItem('evidence_submissions');
+    let submissions = [];
+    try { submissions = submissionsRaw ? JSON.parse(submissionsRaw) : []; } catch(e) {}
+
+    // No hardcoded demo case anymore. Only show user's real submissions.
+
+    if (submissions.length === 0) {
+        list.innerHTML = `<div class="empty-state"><div class="es-icon">📭</div><p>No pending evidence submissions.</p><p style="font-size:0.85rem;">New submissions will appear here automatically.</p></div>`;
+        updateStats();
+        return;
+    }
+
+    submissions.forEach((sub, idx) => renderEvidenceCard(sub, idx, list));
+    updateStats();
+}
+
+function renderEvidenceCard(sub, idx, container) {
+    const status = sub.status || 'pending';
+    if (status === 'pending') pendingCount++;
+    else if (status === 'verified') verifiedCount++;
+    else rejectedCount++;
+
+    const card = document.createElement('div');
+    card.className = `evidence-card ${status}`;
+    card.id = `card-${idx}`;
+
+    // Build file gallery HTML
+    let galleryHtml = '';
+    if (sub.files && sub.files.length > 0) {
+        galleryHtml = `<div class="evidence-gallery-title">📎 Uploaded Evidence (${sub.files.length} file${sub.files.length > 1 ? 's' : ''})</div><div class="evidence-gallery">`;
+        sub.files.forEach((file, fi) => {
+            const itemKey = `${sub.caseId}_${fi}`;
+            const itemStatus = itemStatuses[itemKey] || '';
+            if (file.type === 'image' && file.dataUrl) {
+                galleryHtml += `<div class="ev-item ${itemStatus}" onclick="openLightbox('${file.dataUrl}')">
+                    <img src="${file.dataUrl}" alt="${file.name}">
+                    <div class="ev-label">📸 ${file.name}</div>
+                    <div class="ev-verify-check">${itemStatus === 'item-ok' ? '✓' : itemStatus === 'item-no' ? '✕' : ''}</div>
+                </div>`;
+            } else if (file.type === 'image' && file.demoPlaceholder) {
+                // Demo placeholder with a gradient background
+                galleryHtml += `<div class="ev-item ${itemStatus}">
+                    <div class="ev-placeholder" style="background: linear-gradient(135deg,#1e293b,#0f172a);">${file.demoPlaceholder}</div>
+                    <div class="ev-label">📸 ${file.name}</div>
+                    <div class="ev-verify-check">${itemStatus === 'item-ok' ? '✓' : itemStatus === 'item-no' ? '✕' : ''}</div>
+                </div>`;
             } else {
-                statusEl.textContent = '❌ REJECTED';
-                statusEl.className = 'status-rejected';
-                alert("Evidence rejected.");
-            }
-
-            // Mock updating the main window
-            window.localStorage.setItem('evidence_verified', approved ? 'true' : 'false');
-            window.localStorage.setItem('police_comments', comments);
-        }
-
-        // Listen for new evidence submissions from the main app
-        window.addEventListener('storage', (e) => {
-            if (e.key === 'new_evidence_submitted') {
-                // In a real app, fetch from backend. Here we just reload or add a mock card.
-                console.log("New evidence received in queue.");
+                const icon = file.type === 'pdf' ? '📄' : file.type === 'video' ? '🎥' : '📁';
+                const demoIcon = file.demoPlaceholder || icon;
+                galleryHtml += `<div class="ev-item ${itemStatus}">
+                    <div class="ev-placeholder" style="background: linear-gradient(135deg,#1e293b,#0f172a);">${demoIcon}</div>
+                    <div class="ev-label">${icon} ${file.name}</div>
+                    <div class="ev-verify-check">${itemStatus === 'item-ok' ? '✓' : itemStatus === 'item-no' ? '✕' : ''}</div>
+                </div>`;
             }
         });
-    </script>
+        galleryHtml += '</div>';
+
+        // Per-item verification rows (only show if pending)
+        if (status === 'pending') {
+            galleryHtml += `<div class="per-item-section"><div class="evidence-gallery-title">✅ Mark Each File</div>`;
+            sub.files.forEach((file, fi) => {
+                const itemKey = `${sub.caseId}_${fi}`;
+                galleryHtml += `<div class="per-item-row" id="pir-${idx}-${fi}">
+                    <span class="per-item-name">📎 ${file.name}</span>
+                    <div class="per-item-btns">
+                        <button class="pib-ok" id="pok-${idx}-${fi}" onclick="markItem('${sub.caseId}','${idx}','${fi}','ok')">✓ Authentic</button>
+                        <button class="pib-no" id="pno-${idx}-${fi}" onclick="markItem('${sub.caseId}','${idx}','${fi}','no')">✕ Tampered</button>
+                    </div>
+                </div>`;
+            });
+            galleryHtml += '</div>';
+        }
+    } else {
+        galleryHtml = `<div class="ev-no-files">No files attached to this submission.</div>`;
+    }
+
+    card.innerHTML = `
+        <div class="card-header">
+            <div>
+                <div class="case-ref">📋 Case Ref: ${sub.caseId}</div>
+                <div style="font-size:0.8rem; color:#64748b; margin-top:0.2rem;">Submitted: ${sub.submittedAt || 'N/A'} · ${sub.subCategory || sub.caseType || 'N/A'}</div>
+            </div>
+            <span class="status-pill ${status}" id="pill-${idx}">
+                ${status === 'pending' ? '⏳ PENDING REVIEW' : status === 'verified' ? '✅ VERIFIED' : '❌ REJECTED'}
+            </span>
+        </div>
+        <div class="card-body">
+            <div class="info-grid">
+                <div class="info-item">
+                    <label>Complainant Aadhar</label>
+                    <span>${sub.aadhar || 'Not provided'} ${sub.aadhar ? '<span style="color:#4ade80;font-size:0.75rem;">✓ DigiLocker KYC</span>' : ''}</span>
+                </div>
+                <div class="info-item">
+                    <label>Case Type</label>
+                    <span>${sub.caseType || 'Unknown'} — ${sub.subCategory || 'N/A'}</span>
+                </div>
+            </div>
+
+            <div style="margin-bottom:1rem;">
+                <div class="evidence-gallery-title">📝 Incident Summary</div>
+                <div class="incident-box">${sub.incidentSummary || 'No summary provided.'}</div>
+            </div>
+
+            ${galleryHtml}
+
+            ${status === 'pending' ? `
+            <div>
+                <div class="comment-label">🖊️ Officer Verification Comments (Required)</div>
+                <textarea class="officer-comment" id="comment-${idx}" placeholder="Describe your verification findings. E.g.: 'Photographs match the described location. Medical report bears valid hospital seal. FIR number cross-referenced with station records.'"></textarea>
+            </div>
+            ` : ''}
+
+            ${status === 'pending' ? `
+            <div class="action-bar">
+                <button class="btn-approve" onclick="verifyEvidence(${idx}, '${sub.caseId}', true)">✅ Verify &amp; Approve All Evidence</button>
+                <button class="btn-reject" onclick="verifyEvidence(${idx}, '${sub.caseId}', false)">❌ Reject Evidence</button>
+            </div>
+            <div class="no-submit-note">This action cannot be undone. The AI courtroom will receive your decision.</div>
+            ` : `<div style="text-align:center; padding:1.5rem; margin-top:1rem; border-radius:8px; border:2px dashed ${status==='verified'?'#4ade80':'#f87171'}; background:rgba(255,255,255,0.05); color:${status==='verified'?'#4ade80':'#f87171'}; font-size:1.2rem; font-weight:700;">${status==='verified'?'✅ EVIDENCE VERIFIED AND APPROVED':'❌ EVIDENCE REJECTED — CASE CANNOT PROCEED'}</div>`}
+        </div>`;
+
+    container.appendChild(card);
+}
+
+function markItem(caseId, cardIdx, fileIdx, decision) {
+    const itemKey = `${caseId}_${fileIdx}`;
+    itemStatuses[itemKey] = decision === 'ok' ? 'item-ok' : 'item-no';
+
+    const okBtn = document.getElementById(`pok-${cardIdx}-${fileIdx}`);
+    const noBtn = document.getElementById(`pno-${cardIdx}-${fileIdx}`);
+    if (okBtn) { okBtn.classList.toggle('active', decision === 'ok'); }
+    if (noBtn) { noBtn.classList.toggle('active', decision === 'no'); }
+}
+
+async function verifyEvidence(idx, caseId, approved) {
+    const comment = document.getElementById(`comment-${idx}`).value.trim();
+    if (!comment) {
+        alert('⚠️ Please add officer verification comments before approving or rejecting.');
+        return;
+    }
+
+    const status = approved ? 'verified' : 'rejected';
+
+    // Update localStorage
+    localStorage.setItem('evidence_verified', approved ? 'true' : 'false');
+    localStorage.setItem('police_comments', comment);
+    localStorage.setItem(`case_status_${caseId}`, status);
+
+    // Update stored submissions
+    const submissionsRaw = localStorage.getItem('evidence_submissions');
+    let submissions = [];
+    try { submissions = submissionsRaw ? JSON.parse(submissionsRaw) : []; } catch(e) {}
+    const sub = submissions.find(s => s.caseId === caseId);
+    if (sub) { sub.status = status; localStorage.setItem('evidence_submissions', JSON.stringify(submissions)); }
+
+    // Update UI
+    const pill = document.getElementById(`pill-${idx}`);
+    const card = document.getElementById(`card-${idx}`);
+    if (pill) { pill.textContent = approved ? '✅ VERIFIED' : '❌ REJECTED'; pill.className = `status-pill ${status}`; }
+    if (card) { card.className = `evidence-card ${status}`; }
+
+    // Notify main window if open
+    localStorage.setItem('police_verification_update', JSON.stringify({ caseId, approved, comment, timestamp: new Date().toISOString() }));
+
+    if (approved) {
+        alert(`✅ Evidence VERIFIED and approved.\n\nOfficer: POL-4921\nCase: ${caseId}\nComments: ${comment.substring(0, 100)}...\n\nThe citizen's case will now proceed to AI Fact-Bundling.`);
+        pendingCount = Math.max(0, pendingCount - 1);
+        verifiedCount++;
+    } else {
+        alert(`❌ Evidence REJECTED.\n\nCase: ${caseId}\nOfficer Comments: ${comment.substring(0, 100)}...\n\nThe citizen will be notified that their evidence was not verified.`);
+        pendingCount = Math.max(0, pendingCount - 1);
+        rejectedCount++;
+    }
+    updateStats();
+}
+
+function updateStats() {
+    document.getElementById('stat-pending').textContent = pendingCount;
+    document.getElementById('stat-verified').textContent = verifiedCount;
+    document.getElementById('stat-rejected').textContent = rejectedCount;
+}
+
+function openLightbox(src) {
+    if (!src || src === 'null') {
+        alert("This file cannot be previewed in the lightbox.");
+        return;
+    }
+    document.getElementById('lightbox-img').src = src;
+    document.getElementById('lightbox').classList.add('open');
+}
+function closeLightbox() {
+    document.getElementById('lightbox').classList.remove('open');
+}
+
+// Auto-refresh when main app submits evidence
+window.addEventListener('storage', (e) => {
+    if (e.key === 'evidence_submissions') {
+        setTimeout(loadEvidenceQueue, 500);
+    }
+});
+
+// Initial load
+loadEvidenceQueue();
+</script>
 </body>
 </html>
