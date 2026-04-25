@@ -31,7 +31,8 @@ from environment import JudicialEnv, JudicialAction
 from server.models import (
     ResetRequest, StepRequest,
     ResetResponse, StepResponse, StateResponse, HealthResponse, AIJudgeResponse,
-    EscalateRequest, ChatRequest, ChatResponse
+    EscalateRequest, ChatRequest, ChatResponse,
+    SummonsRequest, CaseStatusRequest
 )
 
 load_dotenv()
@@ -151,11 +152,45 @@ def ai_judge(request: ResetRequest):
 @app.post("/escalate")
 def escalate_case(request: EscalateRequest):
     ESCALATED_CASES.append(request.model_dump())
-    return {"status": "success"}
+    return {"status": "success", "appeal_type": request.appeal_type}
 
 @app.get("/api/escalated-cases")
 def get_escalated_cases():
     return {"cases": ESCALATED_CASES}
+
+@app.post("/summons")
+def generate_summons(request: SummonsRequest):
+    """Generate a Summons Notice for the opposing party."""
+    import datetime
+    now = datetime.datetime.now()
+    summons_id = f"SUM-{now.strftime('%Y%m%d%H%M%S')}"
+    return {
+        "status": "success",
+        "summons_id": summons_id,
+        "case_id": request.case_id,
+        "issued_to": request.respondent_name,
+        "issued_on": now.isoformat(),
+        "message": f"Summons Notice {summons_id} generated for {request.respondent_name} in Case {request.case_id}."
+    }
+
+@app.post("/case_status")
+def get_case_status(request: CaseStatusRequest):
+    """Return the current status of a registered case."""
+    # In production, this queries a DB. For demo: return mock status.
+    return {
+        "case_id": request.case_id,
+        "status": "under_ai_analysis",
+        "status_label": "Under AI Analysis — Council is deliberating",
+        "last_updated": "2026-04-25T10:00:00",
+        "cause_list": [
+            {"step": "Case Registered", "done": True},
+            {"step": "KYC Verified", "done": True},
+            {"step": "Evidence Uploaded", "done": True},
+            {"step": "AI Fact-Finding Complete", "done": True},
+            {"step": "Council Judgment", "done": False},
+            {"step": "AI Resolution Certificate Issued", "done": False},
+        ]
+    }
 
 @app.get("/judge", include_in_schema=False)
 def judge_dashboard():
@@ -169,21 +204,32 @@ def judge_js():
 def fact_finding_chat(request: ChatRequest):
     """Real LLM-powered fact-finding chat using Groq/Llama-3.3."""
     if not API_KEY:
-        # Graceful fallback if no API key
         return ChatResponse(response="API key not configured. Please add your GROQ_API_KEY to the .env file to enable AI fact-finding.")
 
     client = OpenAI(api_key=API_KEY, base_url=API_BASE_URL)
 
-    # Build the conversation history for the LLM
-    system_prompt = """You are JusticeEngine-01, an AI legal analyst for Indian courts. 
-Your task is to gather facts about a case through targeted, specific questions. 
+    is_criminal = request.case_type == "criminal"
+
+    if is_criminal:
+        system_prompt = """You are JusticeEngine-01, an AI paralegal for Indian courts under the new Bharatiya Nyaya Sanhita (BNS).
+Your task is to gather facts for a CRIMINAL case through targeted, specific questions.
 
 Rules:
 - Ask ONE short, specific question per response.
-- Base your questions on the case facts and what the user has already told you.
-- Questions should help clarify: evidence available, timeline of events, witnesses, prior disputes, and any formal complaints filed.
+- Focus on: FIR number, BNS section that may apply, nature of offence, evidence available (CCTV, witnesses, medical reports, vehicle plate), date/time/location, whether police have been contacted.
+- Ask if the accused is known or unknown.
+- Once you have gathered enough facts (after 5-7 exchanges), say EXACTLY: "DOSSIER_COMPLETE: I have gathered sufficient information. You may now generate the AI Fact Bundle for the Judge."
+- NEVER suggest guilt or innocence. You are gathering facts ONLY.
+- Keep language simple and respectful."""
+    else:
+        system_prompt = """You are JusticeEngine-01, an AI legal analyst for Indian courts.
+Your task is to gather facts about a CIVIL case through targeted, specific questions.
+
+Rules:
+- Ask ONE short, specific question per response.
+- Questions should help clarify: written agreements/contracts, timeline of events, evidence available (receipts, messages, photos), witnesses, prior disputes, formal complaints filed, and whether an attempt at out-of-court settlement was made.
 - Once you have gathered enough facts (after 4-6 exchanges), say EXACTLY: "DOSSIER_COMPLETE: I have gathered sufficient information. You may now generate the AI Judgment."
-- Keep your language simple, clear, and professional — the user may not be legally trained.
+- Keep language simple, clear, and professional.
 - Do NOT give legal opinions yet. Only gather facts."""
 
     messages = [{"role": "system", "content": system_prompt}]
@@ -316,27 +362,42 @@ CRITICAL INSTRUCTION: This is a CRIMINAL case. You MUST NOT pass a final judgmen
 Your task is to:
 1. Bundle all the facts and evidence logically for a human judge.
 2. Identify if this is a punishable offense strictly under the new Bharatiya Nyaya Sanhita (BNS) or BNSS.
-3. State the potential punishment.
+3. State the potential punishment range (minimum and maximum).
 4. Set the verdict field EXACTLY to "forward_to_judge".
+5. State whether the offence is cognizable and bailable or non-bailable.
+
+COURT HIERARCHY RULE: Always cite Supreme Court of India rulings first, then High Court.
 
 Respond ONLY with a valid JSON object:
 {
   "verdict": "forward_to_judge",
   "confidence_score": 0.0 to 1.0,
   "reasoning_chain": "Your bundled facts, BNS offense identification, and potential punishment.",
-  "cited_precedents": ["case_id_1", "case_id_2"]
+  "cited_precedents": ["case_id_1", "case_id_2"],
+  "ratio_decidendi": "The binding legal principle: this act is [punishable/not] under BNS Section [X].",
+  "obiter_dicta": "Non-binding observations about the case."
 }"""
     else:
         task_prompt = """
 CRITICAL INSTRUCTION: This is a CIVIL case. You must analyze the facts and provide a final verdict.
-Base your reasoning on the Constitution of India and strictly follow the precedents.
+Base your reasoning strictly on the Constitution of India, the precedents provided, and follow court hierarchy:
+Supreme Court of India > High Court > Sessions Court > Magistrate Court.
+
+IMPORTANT: If the same fact pattern was decided differently at High Court and Supreme Court, ALWAYS follow the Supreme Court verdict.
+
+You MUST provide:
+- ratio_decidendi: The single binding legal principle forming the foundation of your decision.
+- obiter_dicta: Non-binding observations made in passing.
+- If no prior precedent: label as FRESH CASE.
 
 Respond ONLY with a valid JSON object:
 {
   "verdict": "liable OR not_liable OR partial_liability",
   "confidence_score": 0.0 to 1.0,
-  "reasoning_chain": "your step by step logical reasoning here",
-  "cited_precedents": ["case_id_1", "case_id_2"]
+  "reasoning_chain": "Step by step reasoning referencing Constitution, BNS, and court hierarchy.",
+  "cited_precedents": ["case_id_1", "case_id_2"],
+  "ratio_decidendi": "The ratio of this case is: [single binding principle].",
+  "obiter_dicta": "This court notes, obiter, that [non-binding observation]."
 }"""
 
     votes = []
@@ -361,25 +422,45 @@ Respond ONLY with a valid JSON object:
                 
     if not votes:
         raise ValueError("All 3 agents failed to generate a valid response.")
-        
+
     # Majority Voting Logic
     verdict_counts = {}
     for v in votes:
         verdict_counts[v["verdict"]] = verdict_counts.get(v["verdict"], 0) + 1
-        
+
     majority_verdict = max(verdict_counts, key=verdict_counts.get)
-    
+    max_votes = verdict_counts[majority_verdict]
+
+    # 3-WAY SPLIT: if all three disagree (each unique verdict), auto-escalate to human judge
+    if len(verdict_counts) == len(votes) and max_votes == 1:
+        final_reasoning = "[COUNCIL OF AI: 3-WAY SPLIT — No consensus reached. This case is automatically being escalated to a Human Judge as per constitutional design.]\n\nVotes:\n"
+        for i, v in enumerate(votes):
+            final_reasoning += f"  Agent {i+1} ({personas[i].split(':')[0]}): {v.get('verdict')} — {v.get('reasoning_chain', '')[:100]}...\n"
+        return JudicialAction(
+            verdict="forward_to_judge",
+            confidence_score=0.0,
+            reasoning_chain=final_reasoning,
+            cited_precedents=[],
+            ratio_decidendi="3-way split among AI Council — no binding ratio established.",
+            obiter_dicta="Human judicial review is required.",
+            refer_to_human_judge=True,
+            case_status="forwarded_to_judge"
+        )
+
     # Find the best reasoning chain (the one that matches the majority verdict)
     winning_vote = next((v for v in votes if v["verdict"] == majority_verdict), votes[0])
-    
+
     # Modify reasoning to show it was a majority vote
-    final_reasoning = f"[COUNCIL OF AI MAJORITY VOTE: {verdict_counts[majority_verdict]}/3 AGREED]\n\n" + winning_vote["reasoning_chain"]
+    final_reasoning = f"[COUNCIL OF AI MAJORITY VOTE: {max_votes}/3 AGREED]\n\n" + winning_vote.get("reasoning_chain", "")
 
     return JudicialAction(
         verdict=majority_verdict,
         confidence_score=float(winning_vote.get("confidence_score", 0.8)),
         reasoning_chain=final_reasoning,
         cited_precedents=winning_vote.get("cited_precedents", []),
+        ratio_decidendi=winning_vote.get("ratio_decidendi", ""),
+        obiter_dicta=winning_vote.get("obiter_dicta", ""),
+        case_status="resolved_by_ai" if majority_verdict != "forward_to_judge" else "forwarded_to_judge"
     )
 
 

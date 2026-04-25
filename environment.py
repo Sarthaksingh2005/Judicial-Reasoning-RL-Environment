@@ -16,6 +16,8 @@ class JudicialObservation(BaseModel):
     evidence_flags: List[str]
     domain: str
     difficulty: str
+    similar_cases: Optional[List[str]] = []               # IDs of similar resolved cases
+    court_hierarchy_verdicts: Optional[dict] = {}          # {"high_court": "liable", "supreme_court": "not_liable"}
 
 
 class JudicialAction(BaseModel):
@@ -23,6 +25,12 @@ class JudicialAction(BaseModel):
     confidence_score: float
     reasoning_chain: str
     cited_precedents: List[str]
+    ratio_decidendi: Optional[str] = ""   # Binding legal principle for the decision
+    obiter_dicta: Optional[str] = ""       # Non-binding observations made in passing
+    fine_imposed: Optional[float] = None   # Civil fine if applicable
+    appeal_recommended: Optional[bool] = False
+    refer_to_human_judge: Optional[bool] = False
+    case_status: Optional[str] = "open"   # open | resolved_by_ai | forwarded_to_judge | appealed
 
 
 class JudicialReward(BaseModel):
@@ -235,6 +243,19 @@ class JudicialEnv(gym.Env):
             - hallucination_penalty
             + adversarial_bonus
         )
+
+        # SC Alignment Bonus: +0.05 if verdict matches Supreme Court level record
+        hierarchy = self.current_case.get("court_hierarchy_verdicts", {})
+        sc_verdict = hierarchy.get("supreme_court", None)
+        if sc_verdict and action.verdict == sc_verdict:
+            composite += 0.05
+
+        # Hierarchy Violation Penalty: -0.15 if lower court verdict chosen when SC ruling exists
+        if sc_verdict and action.verdict != sc_verdict:
+            hc_verdict = hierarchy.get("high_court", None)
+            if hc_verdict and action.verdict == hc_verdict:
+                composite -= 0.15  # Chose High Court ruling over available Supreme Court ruling
+
         composite = max(0.001, min(0.999, composite))
 
         return JudicialReward(
@@ -261,11 +282,13 @@ class JudicialEnv(gym.Env):
         if word_count > 150:
             length_bonus += 0.15
 
-        # Legal keyword quality signal
+        # Legal keyword quality signal — includes BNS-specific terms
         legal_keywords = [
             "statute", "section", "precedent", "liable", "duty", "negligence",
             "contract", "breach", "evidence", "plaintiff", "defendant", "damages",
-            "reasonable", "burden", "therefore", "hence", "conclude", "holding"
+            "reasonable", "burden", "therefore", "hence", "conclude", "holding",
+            "bns", "bnss", "sanhita", "constitution", "article", "ratio",
+            "forward_to_judge", "punishable", "cognizable", "fir", "supreme court"
         ]
         reasoning_lower = action.reasoning_chain.lower()
         keyword_hits = sum(1 for kw in legal_keywords if kw in reasoning_lower)
