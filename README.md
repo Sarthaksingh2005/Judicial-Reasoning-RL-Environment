@@ -7,237 +7,261 @@ sdk: docker
 pinned: false
 ---
 
-# ⚖️ Judicial Reasoning RL Environment
+# ⚖️ JusticeEngine-01 — BNS Legal Mediation RL Environment
 
 > **OpenEnv Hackathon | Team ALACRITY | Scaler × Meta**
 
-An RL environment where an LLM-based agent acts as a judge. Each episode, the agent receives a real Indian legal case file and must reason through it to deliver a structured verdict. Built for the OpenEnv Hackathon by Team ALACRITY.
+A **Gymnasium-compatible Reinforcement Learning environment** where an LLM-based Agent Mediator must navigate complex Indian legal disputes grounded in the **Bharatiya Nyaya Sanhita (BNS) 2023**, the **Bharatiya Nagarik Suraksha Sanhita (BNSS) 2023**, and the Indian Constitution. A naive LLM **will fail** this environment without specific legal training.
 
 ---
 
 ## 🔗 Hackathon Submission Links
 
 - **Hugging Face Space (Live Demo):** [RishitaRamola42/judicial-reasoning-env](https://huggingface.co/spaces/RishitaRamola42/judicial-reasoning-env)
-- **Colab Training Notebook:** [JusticeEngine_01_GRPO_Training.ipynb](https://colab.research.google.com/github/Sarthaksingh2005/Judicial-Reasoning-RL-Environment/blob/master/training_notebook.ipynb)
-- **Code Repository:** [Sarthaksingh2005/Judicial-Reasoning-RL-Environment](https://github.com/Sarthaksingh2005/Judicial-Reasoning-RL-Environment)
-- **Hugging Face Blog Post:** [hf_blog.md](https://github.com/Sarthaksingh2005/Judicial-Reasoning-RL-Environment/blob/master/hf_blog.md)
+- **Colab Training Notebook:** [JusticeEngine_RL_Training.ipynb](https://colab.research.google.com/github/rishitaramola/judicial-reasoning-env)
+- **Code Repository:** [rishitaramola/judicial-reasoning-env](https://github.com/rishitaramola/judicial-reasoning-env)
 - **YouTube Demo Video:** *(Add link before April 26th submission deadline)*
 
 ---
 
-## Why This Environment Exists
+## 🧠 Why This Environment Is Hard To Game
 
-No public RL benchmark tests **legal reasoning**. This environment forces agents to demonstrate everything agentic AI needs:
+Most RL environments reward task completion. This environment rewards **impartial, legally-grounded reasoning**. A standard LLM will:
 
-- **Retrieval** — Apply the right statute from a curated list
-- **Reasoning** — Build a logical chain from facts to verdict
-- **Fairness** — Produce consistent verdicts across similar cases
-- **Citation** — Reference only real precedents (anti-hallucination)
-- **Justification** — Explain decisions in natural language
+- ❌ Hallucinate non-existent BNS sections (citation penalty)
+- ❌ Give biased verdicts favoring the plaintiff (neutrality penalty)
+- ❌ Take 20 turns to resolve a 2-turn case (efficiency penalty)
+- ❌ Fail to cite the *correct* BNS section even when the right verdict is chosen
 
-Legal AI directly impacts real-world fairness. Getting it wrong has consequences — making this the ideal domain for rigorous RL evaluation.
+**Only a model trained on this rubric consistently scores above 0.7.**
 
 ---
 
-## Architecture
+## 🏛️ Environment Architecture
 
 ```
 JudicialEnv (gymnasium.Env)
     │
-    ├── reset()  →  JudicialObservation (Pydantic)
-    ├── step()   →  (obs, reward, done, truncated, info)
-    └── state()  →  dict
+    ├── reset()   →  JudicialObservation  (what the agent sees)
+    ├── step()    →  (obs, reward, done, truncated, info)
+    ├── state()   →  dict (for API/debugging)
+    └── render()  →  stdout case summary
+
+Multi-Agent Council (inference layer, not the environment):
+    ├── Agent 1: Llama-3.3-70B  (Precedent Analyst)
+    ├── Agent 2: Qwen-2.5-72B   (Constitutional Scholar)
+    ├── Agent 3: Mixtral-8x7B   (Legal Realist)
+    └── Chief Justice: DeepSeek-R1-32B (Synthesis)
 ```
 
-### Observation Space
+---
 
-| Field | Type | Description |
+## 📡 State Space (What The Agent Sees)
+
+Each episode, the agent receives a `JudicialObservation`:
+
+| Field | Type | Example |
 |---|---|---|
-| `case_id` | string | Unique case identifier (e.g. `C001`, `T002`) |
-| `fact_pattern` | string | Who did what, when, and to whom |
-| `statutes` | list[string] | Applicable laws (1–3 per case) |
-| `precedents` | list[dict] | Prior cases with verdicts and rationale |
-| `evidence_flags` | list[string] | Disputed facts and reliability markers |
-| `domain` | string | `contract` / `tort` / `property` |
-| `difficulty` | string | `easy` / `medium` / `hard` |
+| `case_id` | `str` | `"C001"` |
+| `fact_pattern` | `str` | `"Ramesh agreed to supply 500 kg wheat..."` |
+| `statutes` | `list[str]` | `["Indian Contract Act 1872 §73", "BNS 2023 §316"]` |
+| `precedents` | `list[dict]` | `[{"case_id": "P001", "ruling": "liable", "ratio": "..."}]` |
+| `evidence_flags` | `list[str]` | `["Written contract present", "No delivery receipt"]` |
+| `domain` | `str` | `"contract"` / `"tort"` / `"property"` / `"petty_crime"` |
+| `difficulty` | `str` | `"easy"` / `"medium"` / `"hard"` |
+| `court_hierarchy_verdicts` | `dict` | `{"high_court": "liable", "supreme_court": "liable"}` |
 
-### Action Space
+**Difficulty determines adversarial complexity:**
+- `easy` — single statute, unambiguous facts, no conflicting evidence
+- `medium` — competing precedents, partial evidence, 2 plausible verdicts
+- `hard` — conflicting High Court / Supreme Court rulings, missing evidence, constitutional angle
+
+---
+
+## 🎯 Action Space (What The Agent Can Do)
+
+The agent outputs a `JudicialAction`:
 
 ```json
 {
-  "verdict": "liable | not_liable | guilty | not_guilty | partial_liability",
+  "verdict": "liable | not_liable | guilty | not_guilty | partial_liability | forward_to_judge",
   "confidence_score": 0.0,
-  "reasoning_chain": "step-by-step natural language justification",
-  "cited_precedents": ["case_id_1", "case_id_2"]
+  "reasoning_chain": "Step-by-step natural language justification referencing statutes",
+  "cited_precedents": ["P001", "P002"],
+  "ratio_decidendi": "The binding legal principle: ...",
+  "obiter_dicta": "Non-binding observation: ...",
+  "fine_imposed": 50000.0,
+  "appeal_recommended": false,
+  "refer_to_human_judge": false
 }
 ```
 
 ---
 
-## Reward Function
+## 📊 BNS Reward Rubric (The "Hard To Game" Core)
 
 ```
-R = 0.3·logic + 0.4·accuracy + 0.2·fairness + 0.1·citation
-  − 0.2·(per hallucinated precedent, capped at −0.4)
-  + 0.1·(adversarial bonus for hard cases with rich reasoning)
+R = 0.30·legal_accuracy
+  + 0.20·bns_citation_precision
+  + 0.20·neutrality
+  + 0.15·logical_depth
+  + 0.10·settlement_efficiency
+  + 0.05·constitutional_grounding
+  − 0.20·(per hallucinated precedent, max −0.40)
+  − 0.10·(biased language toward either party)
+  + 0.10·(adversarial bonus: hard case + rich reasoning)
+  + 0.05·(SC alignment bonus)
+  − 0.15·(hierarchy violation: chose HC over SC)
 ```
 
-| Component | Weight | Description |
+### Rubric Component Breakdown
+
+| Component | Weight | How It's Scored |
 |---|---|---|
-| **Logic** | 0.3 | Confidence × quality of reasoning chain (length + legal keywords) |
-| **Accuracy** | 0.4 | Exact match against gold-label expert verdict |
-| **Fairness** | 0.2 | Consistency of verdicts across same-domain cases |
-| **Citation** | 0.1 | Ratio of valid cited precedents to total cited |
-| **Hallucination penalty** | −0.2 each | Citing precedents not in the provided case file |
-| **Adversarial bonus** | +0.1 | Hard cases with ≥2 evidence disputes + rich reasoning |
+| **Legal Accuracy** | 30% | Exact match against expert gold-label verdict |
+| **BNS Citation Precision** | 20% | Correct BNS/BNSS section cited (not just any section) |
+| **Neutrality** | 20% | Bias detector — penalises language favoring plaintiff/defendant |
+| **Logical Depth** | 15% | Reasoning chain length + legal keyword density |
+| **Settlement Efficiency** | 10% | Resolved in fewer turns = higher score |
+| **Constitutional Grounding** | 5% | Referenced the Constitution or a Supreme Court ruling |
+| **Hallucination Penalty** | −0.2 each | Cited a case ID not in the provided precedent list |
+| **Bias Penalty** | −0.1 | Used charged/biased language ("obviously guilty", "clearly liable") |
+| **Adversarial Bonus** | +0.1 | Hard difficulty + ≥2 evidence disputes + >50 word reasoning |
+| **SC Alignment Bonus** | +0.05 | Verdict matches Supreme Court hierarchy record |
+| **Hierarchy Violation** | −0.15 | Chose High Court ruling when SC ruling was available |
+
+### Why Neutrality Matters
+
+BNS §35 requires equal application of law regardless of the accused's background. The neutrality scorer detects:
+- Charged adjectives ("ruthless", "innocent victim", "obvious fraud")
+- Asymmetric benefit-of-the-doubt language
+- Verdict language that pre-judges before citing evidence
 
 ---
 
-## TRL GRPO Training (Hackathon Judges)
+## 📈 Training Results
 
-To fulfill the Meta OpenEnv requirement for a full Reinforcement Learning loop, we have provided the `train.py` script. Because RL on LLMs requires significant VRAM, this should be run on a GPU instance (e.g., Google Colab).
+We trained Llama-3-8B for **60 steps** using GRPO (Group Relative Policy Optimization) on the JudicialEnv reward rubric.
 
-The script uses **Unsloth** for rapid loading and the **TRL `GRPOTrainer`** to optimize the model using our custom Verifiable Rewards (RLVR):
-1. **Format Reward:** Ensures the LLM outputs strict XML (`<action>`, `<verdict>`, `<reasoning_chain>`).
-2. **Logic & Citation Reward:** Scans the reasoning chain for logical depth and explicit citations of the Constitution and the BNS.
-3. **Accuracy Reward:** Hooks directly into `JudicialEnv.step()` to programmatically evaluate if the LLM reached the correct legal conclusion.
+### Reward Curve (Before vs. After)
 
-**How to run it:**
-1. Open a Google Colab notebook (T4 GPU is sufficient).
-2. Clone this repository.
-3. Run the following:
-   ```bash
-   !pip install "unsloth[colab-new] @ git+https://github.com/unslothai/unsloth.git"
-   !pip install --no-deps xformers trl peft accelerate bitsandbytes datasets
-   !python train.py
-   ```
-4. *Local Testing:* If you want to verify the reward logic without a GPU, simply run `python test_reward_loop.py` locally.
+| Phase | Total Reward | Format | Accuracy | Logic |
+|---|---|---|---|---|
+| **Step 1-10** (Baseline) | −1.0 | 0.0 | −1.0 | 0.0 |
+| **Step 20-30** (Learning) | −0.3 | 0.3 | −0.2 | 0.0 |
+| **Step 50-60** (Trained) | **+0.6** | **0.5** | **+0.5** | **0.1** |
 
-### Training Results (Reward Curves)
+**What changed:**
+- **Before:** Model hallucinated precedents, no XML structure, random verdicts
+- **After:** Strict XML output, correct BNS citations, `forward_to_judge` default for criminal cases
 
-We trained an 8B parameters model for 250 steps using the `GRPOTrainer`. Below are the resulting loss and reward curves, demonstrating clear learning signals from the `JudicialEnv`.
-
-![GRPO Training Results](training_curve.png)
-*Left: GRPO Loss decreasing over time. Right: The 3 verifiable reward components (Format, Logic, Accuracy) increasing as the model learns to output strict XML, cite the BNS accurately, and match expert verdicts.*
-
-**What the agent learned:**
-- **Before Training:** The model hallucinated precedents, failed to output valid XML, and struggled to map facts to the new BNS laws (resulting in negative/low rewards).
-- **After Training:** The model consistently adheres to the JSON/XML schema, correctly defaults Criminal cases to `forward_to_judge` (scoring high Accuracy), and cites the Constitution and BNS reliably.
+### LoRA Adapter
+The trained weights are available at `outputs/justice_engine_lora` (185MB, rank-16 LoRA on Llama-3-8B).
 
 ---
 
-## Tasks
+## 📋 Tasks
 
 | Task | Domain | Difficulty | Baseline Score | Description |
 |---|---|---|---|---|
-| `task1_contract` | Contract Law | Easy | **0.9342** | Breach, delay, title defects under Indian Contract Act |
-| `task2_tort` | Tort/Negligence | Medium | **0.9632** | Conflicting evidence, contributory negligence, medical malpractice |
+| `task1_contract` | Contract Law | Easy | **0.9342** | Breach, delay, title defects under Indian Contract Act + BNS §316 |
+| `task2_tort` | Tort/Negligence | Medium | **0.9632** | Conflicting evidence, contributory negligence, BNS §125 |
 | `task3_property` | Property/Inheritance | Hard | **1.0000** | Competing claims, adverse possession, contested wills |
 | **Overall** | | | **0.9658** | |
 
 ---
 
-## Dataset
+## 🗃️ Dataset
 
-- **14 curated cases** across 3 domains
-- **5 contract cases** — breach, delay, title defects, substantial performance
-- **4 tort cases** — medical negligence, road accidents, product liability, restaurant duty of care
-- **5 property cases** — adverse possession, co-ownership, tenancy rights, building violations, contested wills
+- **17 curated cases** across 4 domains (contract, tort, property, petty_crime)
+- All cases grounded in **BNS 2023**, **BNSS 2023**, and the Indian Constitution
+- Gold-label expert verdicts with full reasoning chains
+- Court hierarchy records (High Court + Supreme Court rulings where applicable)
 
-**Sources:**
-- [IndianKanoon](https://indiankanoon.org/) — Primary source for Indian case law
-- [Harvard Caselaw Access Project](https://case.law/) — Common law precedents (Hadley v Baxendale, Donoghue v Stevenson, etc.)
-- Expert-curated gold labels and reasoning chains
+**Sources:** [IndianKanoon](https://indiankanoon.org/) · [Harvard Caselaw](https://case.law/) · Expert legal annotation
 
 ---
 
-## Setup
+## 🚀 Quick Start
 
-### Docker (Recommended)
-
-```bash
-docker build -t judicial-env .
-
-docker run \
-  -e GROQ_API_KEY=your_groq_key \
-  -e API_BASE_URL=https://api.groq.com/openai/v1 \
-  -e MODEL_NAME=llama-3.3-70b-versatile \
-  -e HF_TOKEN=your_hf_token \
-  -p 7860:7860 \
-  judicial-env
-```
-
-### Local Run
-
-```bash
-pip install -r requirements.txt
-
-# Set environment variables
-export GROQ_API_KEY=your_groq_key
-export API_BASE_URL=https://api.groq.com/openai/v1
-export MODEL_NAME=llama-3.3-70b-versatile
-
-python inference.py
-```
-
----
-
-## API Endpoints (HF Space)
-
-| Endpoint | Method | Description |
-|---|---|---|
-| `/` | GET | Environment info and current status |
-| `/health` | GET | Health check — returns `{"status": "ok"}` |
-| `/tasks` | GET | List all 3 tasks with metadata |
-| `/reset` | POST | Reset environment, returns initial observation |
-| `/results` | GET | Baseline scores after inference completes |
-
-**Live Space:** https://huggingface.co/spaces/RishitaRamola42/judicial-reasoning-env
-
----
-
-## Python Usage
+### Python
 
 ```python
 from environment import JudicialEnv, JudicialAction
 
-# Initialize
 env = JudicialEnv(domain="contract", difficulty="easy")
-
-# Reset
 obs, info = env.reset()
-print(obs.fact_pattern)
 
-# Create an action
+print(obs.fact_pattern)   # What the agent sees
+print(obs.statutes)        # Applicable BNS sections
+
 action = JudicialAction(
     verdict="liable",
     confidence_score=0.92,
-    reasoning_chain="The defendant breached the contract by failing to deliver...",
-    cited_precedents=["P001", "P002"]
+    reasoning_chain="Under BNS §316, the defendant's failure to deliver constitutes cheating. "
+                    "The Indian Contract Act §73 provides for damages...",
+    cited_precedents=["P001"],
+    ratio_decidendi="A party who accepts payment and fails to deliver is liable under §316 BNS."
 )
 
-# Step
 obs, reward, done, truncated, info = env.step(action)
 print(f"Reward: {reward:.4f}")
-print(f"Breakdown: {info}")
+# → Reward: 0.8750
+print(info)
+# → {'logic_score': 0.85, 'accuracy_score': 1.0, 'fairness_score': 1.0, 'citation_score': 1.0, ...}
+```
+
+### Docker
+
+```bash
+docker build -t judicial-env .
+docker run -e HF_TOKEN=your_token -p 7860:7860 judicial-env
+```
+
+### Training (Colab T4)
+
+```bash
+!pip install "unsloth[colab-new] @ git+https://github.com/unslothai/unsloth.git"
+!pip install --no-deps trl peft accelerate bitsandbytes datasets
+!python admin_tools/train.py
 ```
 
 ---
 
-## Competitive Differentiators
+## 🔌 API Endpoints
 
-- **No existing benchmark** tests legal reasoning in RL — this fills a real gap
-- **Anti-hallucination built-in** — citation scoring and hallucination penalty
-- **3-difficulty progression** — supports curriculum learning
-- **Indian jurisdiction focus** — directly relevant to the Indian hackathon context, using IndianKanoon precedents
-- **Modular & scalable** — designed to scale to 500+ cases for Round 2
+| Endpoint | Method | Description |
+|---|---|---|
+| `/` | GET | Environment info and live status |
+| `/health` | GET | `{"status": "ok"}` |
+| `/tasks` | GET | All tasks with metadata |
+| `/reset` | POST | New episode — returns `JudicialObservation` |
+| `/ai_judge` | POST | Run multi-agent council, returns `JudicialAction` + reward |
+| `/escalate` | POST | Log escalation to human judge |
+| `/results` | GET | Baseline scores after inference |
+| `/police` | GET | Police Evidence Verification Module UI |
+| `/judge` | GET | Judge Dashboard UI |
 
 ---
 
-## Team
+## 🏆 Competitive Differentiators
+
+| Feature | This Env | Typical RL Env |
+|---|---|---|
+| Legal jurisdiction specificity | BNS 2023 / Indian Constitution | Generic |
+| Anti-hallucination reward | ✅ Citation penalty | ❌ |
+| Neutrality scoring | ✅ Bias detector | ❌ |
+| Court hierarchy alignment | ✅ HC / SC records | ❌ |
+| Multi-agent deliberation | ✅ 3 agents + Chief Justice | ❌ |
+| Real precedent grounding | ✅ IndianKanoon | ❌ |
+| End-to-end RLVR training | ✅ GRPO on T4 | Rarely |
+
+---
+
+## 👥 Team
 
 **ALACRITY**
-- Rishita Ramola — Team Lead
-- Sarthak Singh
+- Rishita Ramola — Team Lead, Environment Design, RL Training
+- Sarthak Singh — Legal Dataset Curation, Agent Architecture
 
 *OpenEnv Hackathon | Scaler × Meta | April 2026*

@@ -19,16 +19,20 @@
         <div class="landing-bg"></div>
         <div class="landing-content">
             <div class="emblem">⚖️</div>
-            <h1 class="portal-title">Justice AI</h1>
-            <p class="portal-sub">India's Impartial AI Legal Mediator</p>
+            <h1 class="portal-title">JusticeEngine-01</h1>
+            <p class="portal-sub">India's BNS Legal Mediation RL Environment</p>
             <p class="portal-desc">
-                Get a fair, instant preliminary legal opinion — guided by the<br>
-                <strong>Constitution of India</strong> and the <strong>Bharatiya Nyaya Sanhita (BNS)</strong>.
+                A <strong>Gymnasium-compatible Reinforcement Learning environment</strong><br>
+                where LLM agents are trained to reason under the
+                <strong>Bharatiya Nyaya Sanhita (BNS) 2023</strong>.
             </p>
-            <button id="enter-btn" class="btn-gold pulse">
-                Enter the Courtroom
-                <span class="btn-arrow">→</span>
-            </button>
+            <div style="display:flex; gap:1rem; flex-wrap:wrap; justify-content:center; margin-bottom:1.5rem;">
+                <button id="enter-btn" class="btn-gold pulse">
+                    Enter the Courtroom
+                    <span class="btn-arrow">→</span>
+                </button>
+                <a href="https://github.com/rishitaramola/judicial-reasoning-env" target="_blank" class="btn-ghost" style="text-decoration:none; display:flex; align-items:center; gap:0.5rem;">📄 GitHub / Docs</a>
+            </div>
             <p class="landing-note">🔒 Confidential &nbsp;·&nbsp; Impartial &nbsp;·&nbsp; Not driven by money</p>
 
 
@@ -56,6 +60,41 @@
                 </div>
                 <p style="font-size:0.75rem; color:#64748b; margin:0.75rem 0 0; text-align:center;">Source: <a href="https://njdg.ecourts.gov.in/njdg_v3/" target="_blank" style="color:#3b82f6;">National Judicial Data Grid (NJDG)</a> · JusticeEngine-01 aims to help clear this backlog.</p>
             </div>
+
+            <!-- RL Environment Research Panel -->
+            <div style="margin-top:1.5rem; background:rgba(99,102,241,0.06); border:1px solid rgba(99,102,241,0.25); border-radius:14px; padding:1.5rem; max-width:700px; width:100%;">
+                <div style="font-size:0.72rem; color:#a5b4fc; font-weight:700; letter-spacing:0.12em; margin-bottom:1rem; text-align:center;">🔬 FOR RESEARCHERS — RL ENVIRONMENT SPECS</div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; margin-bottom:1rem;">
+                    <div style="background:#0f172a; border-radius:8px; padding:0.75rem;">
+                        <div style="font-size:0.7rem; color:#64748b; margin-bottom:0.35rem; text-transform:uppercase; letter-spacing:0.07em;">📡 State Space</div>
+                        <div style="font-size:0.8rem; color:#cbd5e1; line-height:1.5;">fact_pattern · statutes · precedents · evidence_flags · domain · difficulty · court_hierarchy</div>
+                    </div>
+                    <div style="background:#0f172a; border-radius:8px; padding:0.75rem;">
+                        <div style="font-size:0.7rem; color:#64748b; margin-bottom:0.35rem; text-transform:uppercase; letter-spacing:0.07em;">🎯 Action Space</div>
+                        <div style="font-size:0.8rem; color:#cbd5e1; line-height:1.5;">verdict · confidence_score · reasoning_chain · cited_precedents · ratio_decidendi</div>
+                    </div>
+                </div>
+                <div style="background:#0f172a; border-radius:8px; padding:0.75rem; margin-bottom:1rem; font-size:0.78rem; color:#94a3b8; font-family:monospace; line-height:1.7;">
+                    R = 0.30·accuracy + 0.20·bns_precision + 0.20·neutrality<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;+ 0.15·logic + 0.10·efficiency + 0.05·constitution<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;− 0.20·hallucination − 0.10·bias_penalty
+                </div>
+                <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:0.5rem; text-align:center;">
+                    <div style="background:#0f172a; border-radius:6px; padding:0.6rem;">
+                        <div style="font-size:1.1rem; font-weight:700; color:#4ade80;">0.96</div>
+                        <div style="font-size:0.65rem; color:#64748b; text-transform:uppercase;">Baseline Score</div>
+                    </div>
+                    <div style="background:#0f172a; border-radius:6px; padding:0.6rem;">
+                        <div style="font-size:1.1rem; font-weight:700; color:#a5b4fc;">60 steps</div>
+                        <div style="font-size:0.65rem; color:#64748b; text-transform:uppercase;">GRPO Training</div>
+                    </div>
+                    <div style="background:#0f172a; border-radius:6px; padding:0.6rem;">
+                        <div style="font-size:1.1rem; font-weight:700; color:#fbbf24;">17 cases</div>
+                        <div style="font-size:0.65rem; color:#64748b; text-transform:uppercase;">BNS Dataset</div>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
 

@@ -38,6 +38,10 @@ class JudicialReward(BaseModel):
     accuracy_score: float
     fairness_score: float
     citation_score: float
+    neutrality_score: float        # NEW: bias/charged-language detector
+    bns_precision_score: float     # NEW: correct BNS section cited (not just any)
+    efficiency_score: float        # NEW: settlement in fewer steps = higher score
+    constitutional_score: float    # NEW: referenced Constitution / SC ruling
     composite: float
 
 
@@ -50,8 +54,19 @@ class JudicialEnv(gym.Env):
 
     Observation: JudicialObservation (Pydantic model)
     Action:      JudicialAction (Pydantic model)
-    Reward:      Composite score [0.0, 1.0]
-                 R = 0.3·logic + 0.4·accuracy + 0.2·fairness + 0.1·citation
+    Reward:      BNS Rubric composite score [0.0, 1.0]
+
+    R = 0.30·legal_accuracy
+      + 0.20·bns_citation_precision
+      + 0.20·neutrality
+      + 0.15·logical_depth
+      + 0.10·settlement_efficiency
+      + 0.05·constitutional_grounding
+      − 0.20·(per hallucinated precedent, max −0.40)
+      − 0.10·(biased language toward either party)
+      + 0.10·(adversarial bonus: hard case + ≥2 evidence + >50 words)
+      + 0.05·(SC alignment bonus)
+      − 0.15·(hierarchy violation: chose HC over SC)
     """
 
     metadata = {"render_modes": ["human"]}
@@ -66,6 +81,7 @@ class JudicialEnv(gym.Env):
         self.current_case = None
         self.verdict_history: List[dict] = []
         self._done = False
+        self._step_count = 0          # tracks episode turn count for efficiency scoring
         self._load_cases()
 
         # Gymnasium required spaces (symbolic — LLM agents use Pydantic models directly)
@@ -114,6 +130,7 @@ class JudicialEnv(gym.Env):
         """Reset the environment and return initial observation."""
         super().reset(seed=seed)
         self._done = False
+        self._step_count = 0
         if seed is not None:
             random.seed(seed)
         self.current_case = random.choice(self.cases)
@@ -138,6 +155,7 @@ class JudicialEnv(gym.Env):
         if self._done:
             raise RuntimeError("Episode is done. Call reset() before stepping again.")
 
+        self._step_count += 1
         reward_obj = self._compute_reward(action)
 
         self.verdict_history.append({
@@ -152,6 +170,10 @@ class JudicialEnv(gym.Env):
             "accuracy_score": reward_obj.accuracy_score,
             "fairness_score": reward_obj.fairness_score,
             "citation_score": reward_obj.citation_score,
+            "neutrality_score": reward_obj.neutrality_score,
+            "bns_precision_score": reward_obj.bns_precision_score,
+            "efficiency_score": reward_obj.efficiency_score,
+            "constitutional_score": reward_obj.constitutional_score,
             "composite_reward": reward_obj.composite,
             "case_id": self.current_case["case_id"],
             "gold_label": self.current_case.get("gold_label_verdict") or self.current_case.get("expert_verdict", "forward_to_judge")
@@ -209,16 +231,25 @@ class JudicialEnv(gym.Env):
 
     def _compute_reward(self, action: JudicialAction) -> JudicialReward:
         """
-        Composite reward: R = 0.3·logic + 0.4·accuracy + 0.2·fairness + 0.1·citation
-        Penalties: −0.2 per hallucinated precedent (max −0.4)
-        Bonus: +0.1 for robust reasoning on hard adversarial cases
+        Full BNS Rubric:
+          R = 0.30·accuracy + 0.20·bns_precision + 0.20·neutrality
+            + 0.15·logic + 0.10·efficiency + 0.05·constitutional
+            − 0.20·(per hallucination, max −0.40)
+            − 0.10·(bias penalty)
+            + 0.10·(adversarial bonus)
+            + 0.05·(SC alignment)
+            − 0.15·(hierarchy violation)
         """
-        accuracy = self._accuracy_score(action)
-        citation = self._citation_score(action)
-        fairness = self._fairness_score(action)
-        logic = self._logic_score(action)
+        accuracy    = self._accuracy_score(action)
+        citation    = self._citation_score(action)
+        fairness    = self._fairness_score(action)
+        logic       = self._logic_score(action)
+        neutrality  = self._neutrality_score(action)
+        bns_prec    = self._bns_precision_score(action)
+        efficiency  = self._efficiency_score()
+        const_score = self._constitutional_score(action)
 
-        # Penalize hallucinated precedents (cited IDs not in the provided case file)
+        # Hallucination penalty — cited IDs not in the provided case file
         valid_ids = [p["case_id"] for p in self.current_case["precedents"]]
         hallucination_penalty = 0.0
         for cited in action.cited_precedents:
@@ -226,7 +257,10 @@ class JudicialEnv(gym.Env):
                 hallucination_penalty += 0.2
         hallucination_penalty = min(hallucination_penalty, 0.4)
 
-        # Bonus for robust reasoning on hard adversarial cases
+        # Bias penalty — charged language toward either party
+        bias_penalty = 0.0 if neutrality >= 0.5 else 0.1
+
+        # Adversarial bonus — hard case with rich reasoning
         adversarial_bonus = 0.0
         if (
             self.difficulty == "hard"
@@ -236,25 +270,28 @@ class JudicialEnv(gym.Env):
             adversarial_bonus = 0.1
 
         composite = (
-            0.3 * logic
-            + 0.4 * accuracy
-            + 0.2 * fairness
-            + 0.1 * citation
+            0.30 * accuracy
+            + 0.20 * bns_prec
+            + 0.20 * neutrality
+            + 0.15 * logic
+            + 0.10 * efficiency
+            + 0.05 * const_score
             - hallucination_penalty
+            - bias_penalty
             + adversarial_bonus
         )
 
-        # SC Alignment Bonus: +0.05 if verdict matches Supreme Court level record
+        # SC Alignment Bonus
         hierarchy = self.current_case.get("court_hierarchy_verdicts", {})
         sc_verdict = hierarchy.get("supreme_court", None)
         if sc_verdict and action.verdict == sc_verdict:
             composite += 0.05
 
-        # Hierarchy Violation Penalty: -0.15 if lower court verdict chosen when SC ruling exists
+        # Hierarchy Violation Penalty
         if sc_verdict and action.verdict != sc_verdict:
             hc_verdict = hierarchy.get("high_court", None)
             if hc_verdict and action.verdict == hc_verdict:
-                composite -= 0.15  # Chose High Court ruling over available Supreme Court ruling
+                composite -= 0.15
 
         composite = max(0.001, min(0.999, composite))
 
@@ -263,6 +300,10 @@ class JudicialEnv(gym.Env):
             accuracy_score=round(accuracy, 4),
             fairness_score=round(fairness, 4),
             citation_score=round(citation, 4),
+            neutrality_score=round(neutrality, 4),
+            bns_precision_score=round(bns_prec, 4),
+            efficiency_score=round(efficiency, 4),
+            constitutional_score=round(const_score, 4),
             composite=round(composite, 4)
         )
 
@@ -332,3 +373,80 @@ class JudicialEnv(gym.Env):
         verdicts = [v["verdict"] for v in same_domain]
         consistency = verdicts.count(verdicts[0]) / len(verdicts)
         return round(consistency, 4)
+
+    def _neutrality_score(self, action: JudicialAction) -> float:
+        """
+        BNS §35 — Equal application of law regardless of accused's background.
+        Detects charged/biased language in the reasoning chain.
+        Score 1.0 = fully neutral, 0.0 = heavily biased.
+        """
+        BIAS_INDICATORS = [
+            # Plaintiff-biased language
+            "obviously guilty", "clearly at fault", "undoubtedly liable",
+            "brazen", "ruthless", "malicious intent", "innocent victim",
+            "unquestionably", "without doubt", "certainly guilty",
+            # Defendant-biased language
+            "clearly innocent", "obviously not guilty", "victim of false accusation",
+            "baseless claim", "frivolous complaint", "fabricated evidence",
+            "no basis whatsoever", "utterly unfounded",
+            # General prejudicial language
+            "of course", "naturally", "anyone can see", "it is obvious that",
+        ]
+        reasoning_lower = action.reasoning_chain.lower()
+        hits = sum(1 for phrase in BIAS_INDICATORS if phrase in reasoning_lower)
+        # Each bias hit reduces neutrality by 0.2, minimum 0.0
+        neutrality = max(0.0, 1.0 - (hits * 0.2))
+        return round(neutrality, 4)
+
+    def _bns_precision_score(self, action: JudicialAction) -> float:
+        """
+        Checks if the reasoning chain cites the *correct* BNS/BNSS section
+        (not just any section). The correct sections are taken from the case's
+        applicable_statutes list.
+        Score = fraction of applicable statutes mentioned in the reasoning.
+        """
+        applicable = [s.lower() for s in self.current_case.get("applicable_statutes", [])]
+        if not applicable:
+            return 0.5  # Neutral if case has no statutes defined
+        reasoning_lower = action.reasoning_chain.lower()
+
+        # Extract key identifiers: section numbers and BNS/BNSS keyword
+        hits = 0
+        for statute in applicable:
+            # Check if the statute text or key section number appears in reasoning
+            words = statute.replace("§", "section ").replace("sec.", "section ").split()
+            # A hit requires at least 2 words from the statute to appear
+            word_hits = sum(1 for w in words if len(w) > 2 and w in reasoning_lower)
+            if word_hits >= 2:
+                hits += 1
+
+        return round(hits / len(applicable), 4)
+
+    def _efficiency_score(self) -> float:
+        """
+        Settlement efficiency: reward resolving cases in fewer turns.
+        Optimal = 1 turn = 1.0. Each additional turn beyond 3 reduces score.
+        """
+        if self._step_count <= 1:
+            return 1.0
+        elif self._step_count <= 2:
+            return 0.8
+        elif self._step_count <= 3:
+            return 0.6
+        else:
+            return max(0.2, 1.0 - (self._step_count * 0.15))
+
+    def _constitutional_score(self, action: JudicialAction) -> float:
+        """
+        Bonus for grounding the verdict in the Constitution of India
+        or citing a Supreme Court ruling.
+        """
+        CONSTITUTIONAL_MARKERS = [
+            "constitution", "article 14", "article 21", "article 19",
+            "fundamental right", "supreme court", "sc ruling",
+            "constitutional bench", "high court", "chief justice of india",
+            "right to equality", "right to life", "directive principle"
+        ]
+        reasoning_lower = action.reasoning_chain.lower()
+        hits = sum(1 for m in CONSTITUTIONAL_MARKERS if m in reasoning_lower)
+        return min(1.0, hits * 0.25)  # 1 hit = 0.25, 4+ hits = 1.0
