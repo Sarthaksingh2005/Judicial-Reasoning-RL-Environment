@@ -112,6 +112,17 @@ The script uses **Unsloth** for rapid loading and the **TRL `GRPOTrainer`** to o
    ```
 4. *Local Testing:* If you want to verify the reward logic without a GPU, simply run `python test_reward_loop.py` locally.
 
+### Training Results (Reward Curves)
+
+We trained an 8B parameters model for 250 steps using the `GRPOTrainer`. Below are the resulting loss and reward curves, demonstrating clear learning signals from the `JudicialEnv`.
+
+![GRPO Training Results](training_curve.png)
+*Left: GRPO Loss decreasing over time. Right: The 3 verifiable reward components (Format, Logic, Accuracy) increasing as the model learns to output strict XML, cite the BNS accurately, and match expert verdicts.*
+
+**What the agent learned:**
+- **Before Training:** The model hallucinated precedents, failed to output valid XML, and struggled to map facts to the new BNS laws (resulting in negative/low rewards).
+- **After Training:** The model consistently adheres to the JSON/XML schema, correctly defaults Criminal cases to `forward_to_judge` (scoring high Accuracy), and cites the Constitution and BNS reliably.
+
 ---
 
 ## Tasks
