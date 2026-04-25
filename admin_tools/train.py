@@ -1,13 +1,10 @@
-﻿"""
+"""
 TRL GRPO Training Script for JusticeEngine-01
-
-This script uses the unsloth library and trl.GRPOTrainer to train a base model
-(e.g., Llama-3-8B-Instruct) against the JudicialEnv using Reinforcement Learning
-with Verifiable Rewards (RLVR).
 
 Prerequisites (Run on a GPU instance like Google Colab):
 !pip install "unsloth[colab-new] @ git+https://github.com/unslothai/unsloth.git"
 !pip install --no-deps xformers trl peft accelerate bitsandbytes
+"""
 """
 
 import os
@@ -19,7 +16,6 @@ try:
     from datasets import Dataset
     from trl import GRPOConfig, GRPOTrainer
     from unsloth import FastLanguageModel, PatchFastRL
-    # Patch unsloth for fast RL
     PatchFastRL("GRPO", FastLanguageModel)
 except ImportError:
     print("Warning: GPU/TRL libraries not found. Run on Colab for full training.")
@@ -28,9 +24,7 @@ except ImportError:
 from environment import JudicialEnv, JudicialAction
 from graders.programmatic_grader import ProgrammaticGrader
 
-# ==========================================
-# 1. Configuration
-# ==========================================
+
 MODEL_NAME = "unsloth/Meta-Llama-3-8B-Instruct"
 MAX_SEQ_LENGTH = 4096
 LORA_RANK = 16
@@ -44,11 +38,6 @@ Respond ONLY in valid XML format:
   <reasoning_chain>Your step-by-step reasoning</reasoning_chain>
 </action>"""
 
-# ==========================================
-# 2. Reward Functions
-# ==========================================
-# GRPO expects reward functions to take a list of prompts and completions
-# and return a list of float rewards.
 
 def extract_xml_action(completion: str) -> dict:
     """Helper to extract XML fields from LLM completion."""
@@ -92,16 +81,11 @@ def accuracy_reward(prompts, completions, **kwargs):
             continue
             
         try:
-            # We construct a JudicialAction and step the environment
             action = JudicialAction(**action_dict)
-            
-            # Note: In a real distributed RL setup, we would extract the case_id
-            # from the kwargs dataset. Here we assume a static test case for grading.
             env = JudicialEnv(domain="contract", difficulty="easy")
             env.reset()
             obs, reward, done, trunc, info = env.step(action)
             
-            # Return the programmatic accuracy score from the environment
             rewards.append(float(info.get('accuracy_score', 0.0)))
         except Exception:
             rewards.append(-0.5)
@@ -126,9 +110,7 @@ def logic_reward(prompts, completions, **kwargs):
             rewards.append(0.0)
     return rewards
 
-# ==========================================
-# 3. Data Preparation
-# ==========================================
+
 def load_dataset():
     data_path = os.path.join("data", "cases.json")
     with open(data_path, "r") as f:
@@ -145,9 +127,7 @@ def load_dataset():
         })
     return Dataset.from_list(dataset)
 
-# ==========================================
-# 4. Training Loop
-# ==========================================
+
 def main():
     print("Loading Model via Unsloth...")
     model, tokenizer = FastLanguageModel.from_pretrained(
