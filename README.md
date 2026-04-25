@@ -15,6 +15,15 @@ An RL environment where an LLM-based agent acts as a judge. Each episode, the ag
 
 ---
 
+## 🔗 Hackathon Submission Links
+
+- **Hugging Face Space (Live Demo):** [RishitaRamola42/judicial-reasoning-env](https://huggingface.co/spaces/RishitaRamola42/judicial-reasoning-env)
+- **Colab Training Notebook:** [JusticeEngine_01_GRPO_Training.ipynb](https://colab.research.google.com/github/Sarthaksingh2005/Judicial-Reasoning-RL-Environment/blob/master/training_notebook.ipynb)
+- **Code Repository:** [Sarthaksingh2005/Judicial-Reasoning-RL-Environment](https://github.com/Sarthaksingh2005/Judicial-Reasoning-RL-Environment)
+- **Hugging Face Blog Post:** [Read our Blog Post (hf_blog.md)](https://github.com/Sarthaksingh2005/Judicial-Reasoning-RL-Environment/blob/master/hf_blog.md)
+
+---
+
 ## Why This Environment Exists
 
 No public RL benchmark tests **legal reasoning**. This environment forces agents to demonstrate everything agentic AI needs:
