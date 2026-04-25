@@ -61,7 +61,7 @@ print("✅ All imports successful — ready to train!")
 
 # ── CELL 6: Load Model + LoRA ─────────────────────────────────────
 """
-MODEL_NAME     = "unsloth/Meta-Llama-3-8B-Instruct"
+MODEL_NAME     = "unsloth/llama-3-8b-bnb-4bit"   # Pre-quantized, works on T4
 MAX_SEQ_LENGTH = 4096
 LORA_RANK      = 16
 
@@ -70,7 +70,7 @@ model, tokenizer = FastLanguageModel.from_pretrained(
     model_name            = MODEL_NAME,
     max_seq_length        = MAX_SEQ_LENGTH,
     load_in_4bit          = True,
-    fast_inference        = True,
+    fast_inference        = False,   # vLLM not needed for training
     max_lora_rank         = LORA_RANK,
     gpu_memory_utilization = 0.6,
 )
@@ -194,7 +194,7 @@ print(f"✅ Dataset loaded: {len(dataset)} cases")
 from trl import GRPOConfig, GRPOTrainer
 
 training_args = GRPOConfig(
-    use_vllm                    = True,
+    use_vllm                    = False,  # vLLM not installed on free Colab
     learning_rate               = 5e-6,
     adam_beta1                  = 0.9,
     adam_beta2                  = 0.99,
