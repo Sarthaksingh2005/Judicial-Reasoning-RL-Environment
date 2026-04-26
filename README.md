@@ -37,7 +37,7 @@ We use OpenEnv's Rubric system to provide a composable reward signal during GRPO
 The core training loop uses **GRPO** (Group Relative Policy Optimization) via the HuggingFace `TRL` library and `Unsloth` for 4-bit quantization. 
 - **Model:** `unsloth/Meta-Llama-3.1-8B-Instruct`
 - **Execution:** Runs efficiently on a free Colab T4 GPU.
-- **Colab Notebook:** [Link to Training Notebook](https://colab.research.google.com/) *(Note: Insert actual link upon deployment)*
+- **Colab Notebook:** [Link to Training Notebook](https://colab.research.google.com/github/rishitaramola/judicial-reasoning-env/blob/main/training/training_colab.ipynb)
 
 ![Reward Curve](training_curve.png)
 
@@ -79,5 +79,5 @@ While several excellent datasets and models exist in the legal AI space, this pr
 ## Links
 - **HF Space (Demo):** https://huggingface.co/spaces/RishitaRamola42/judicial-reasoning-env
 - **GitHub Repository:** https://github.com/rishitaramola/judicial-reasoning-env
-- **Colab Training Notebook:** [Add Link]
+- **Colab Training Notebook:** [Open in Colab](https://colab.research.google.com/github/rishitaramola/judicial-reasoning-env/blob/main/training/training_colab.ipynb)
 - **YouTube Demo Video:** [Add Link]
