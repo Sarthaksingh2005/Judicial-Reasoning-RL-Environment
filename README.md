@@ -33,6 +33,26 @@ We use OpenEnv's Rubric system to provide a composable reward signal during GRPO
 - **Sources:** Derived from IndianKanoon API, NJDG, and Ministry of Home Affairs reference texts.
 - **Precedents:** Western benchmarks (Hadley v Baxendale) have been explicitly replaced with binding Indian equivalents (Satyabrata Ghose v Mugneeram Bangur, M.C. Mehta v Union of India, Vishaka v State of Rajasthan).
 
+## Setup
+
+### Docker (Recommended)
+
+```bash
+docker build -t judicial-env .
+
+docker run \
+  -e OPENROUTER_API_KEY=your_openrouter_key \
+  -p 7860:7860 \
+  judicial-env
+```
+
+### Local Run
+
+```bash
+pip install -r requirements.txt
+python server/app.py
+```
+
 ## Training
 The core training loop uses **GRPO** (Group Relative Policy Optimization) via the HuggingFace `TRL` library and `Unsloth` for 4-bit quantization. 
 - **Model:** `unsloth/Meta-Llama-3.1-8B-Instruct`
@@ -80,4 +100,5 @@ While several excellent datasets and models exist in the legal AI space, this pr
 - **HF Space (Demo):** https://huggingface.co/spaces/RishitaRamola42/judicial-reasoning-env
 - **GitHub Repository:** https://github.com/rishitaramola/judicial-reasoning-env
 - **Colab Training Notebook:** [Open in Colab](https://colab.research.google.com/github/rishitaramola/judicial-reasoning-env/blob/main/training/training_colab.ipynb)
+- **Hugging Face Blog Post:** [Read the Article](hf_blog.md)
 - **YouTube Demo Video:** [Add Link]
