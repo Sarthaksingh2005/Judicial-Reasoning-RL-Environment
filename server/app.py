@@ -777,8 +777,8 @@ async def run_all_tasks():
     global RESULTS
     RESULTS["status"] = "running"
 
-    if not API_KEY:
-        print("[WARN] No API key set (HF_TOKEN / GROQ_API_KEY). Skipping inference.", flush=True)
+    if not OPENROUTER_API_KEY:
+        print("[WARN] No API key set (OPENROUTER_API_KEY). Skipping inference.", flush=True)
         RESULTS.update({"status": "skipped", "scores": {}, "overall": 0.0})
         return
 
